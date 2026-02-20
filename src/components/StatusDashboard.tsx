@@ -37,16 +37,20 @@ export function StatusDashboard({ status, onRefresh, success, error }: Props) {
     const [isEditOpen, setIsEditOpen] = useState(false)
     const [adminPassword, setAdminPassword] = useState("")
     const [aiModel, setAiModel] = useState(status.ai.model || "gpt-4o")
+    const [tgToken, setTgToken] = useState("")
+    const [tgChatId, setTgChatId] = useState("")
     const [aiApiKey, setAiApiKey] = useState("")
     const [isSaving, setIsSaving] = useState(false)
     const [saveError, setSaveError] = useState("")
 
-    const handleSaveAIConfig = async () => {
+    const handleSaveSettings = async () => {
         setIsSaving(true)
         setSaveError("")
         try {
             const body: Record<string, string> = { AI_MODEL: aiModel }
             if (aiApiKey) body.AI_API_KEY = aiApiKey
+            if (tgToken) body.TELEGRAM_BOT_TOKEN = tgToken
+            if (tgChatId) body.TELEGRAM_CHAT_ID = tgChatId
 
             const res = await fetch("/api/config", {
                 method: "POST",
@@ -63,6 +67,8 @@ export function StatusDashboard({ status, onRefresh, success, error }: Props) {
             setIsEditOpen(false)
             setAdminPassword("")
             setAiApiKey("")
+            setTgToken("")
+            setTgChatId("")
             onRefresh()
         } catch (e: any) {
             setSaveError(e.message)
@@ -139,14 +145,14 @@ export function StatusDashboard({ status, onRefresh, success, error }: Props) {
                         <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
                             <DialogTrigger asChild>
                                 <Button variant="outline" className="h-auto flex-col py-4 gap-1">
-                                    <span className="text-lg">🧠</span><span className="text-xs">Change AI Model</span>
+                                    <span className="text-lg">⚙️</span><span className="text-xs">General Settings</span>
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent className="sm:max-w-md">
+                            <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
                                 <DialogHeader>
-                                    <DialogTitle>Edit AI Configuration</DialogTitle>
+                                    <DialogTitle>System Settings</DialogTitle>
                                     <DialogDescription>
-                                        Update your AI provider and API Key. You must provide your Admin Password to authorize changes.
+                                        Update your AI provider, API Keys, or Telegram configuration. You must provide your Admin Password to authorize changes.
                                     </DialogDescription>
                                 </DialogHeader>
                                 <div className="space-y-4 py-4">
@@ -154,7 +160,7 @@ export function StatusDashboard({ status, onRefresh, success, error }: Props) {
                                         <Label>Admin Password</Label>
                                         <Input type="password" placeholder="Enter your setup password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} />
                                     </div>
-                                    <div className="space-y-2">
+                                    <div className="space-y-2 pt-2 border-t">
                                         <Label>AI Model</Label>
                                         <Select value={aiModel} onValueChange={setAiModel}>
                                             <SelectTrigger>
@@ -173,14 +179,24 @@ export function StatusDashboard({ status, onRefresh, success, error }: Props) {
                                         </Select>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>New API Key</Label>
+                                        <Label>New AI API Key</Label>
                                         <Input type="password" placeholder="sk-..." value={aiApiKey} onChange={(e) => setAiApiKey(e.target.value)} />
                                         <p className="text-[10px] text-muted-foreground">Leave blank to keep the existing API key.</p>
+                                    </div>
+                                    <div className="space-y-2 pt-2 border-t">
+                                        <Label>New Telegram Bot Token</Label>
+                                        <Input type="password" placeholder="123456:ABC-DEF..." value={tgToken} onChange={(e) => setTgToken(e.target.value)} />
+                                        <p className="text-[10px] text-muted-foreground">Leave blank to keep existing.</p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>New Telegram Chat ID</Label>
+                                        <Input type="text" placeholder="123456789" value={tgChatId} onChange={(e) => setTgChatId(e.target.value)} />
+                                        <p className="text-[10px] text-muted-foreground">Leave blank to keep existing. Ask @userinfobot if you are unsure.</p>
                                     </div>
                                     {saveError && <p className="text-sm text-destructive">{saveError}</p>}
                                 </div>
                                 <DialogFooter>
-                                    <Button onClick={handleSaveAIConfig} disabled={isSaving || !adminPassword}>
+                                    <Button onClick={handleSaveSettings} disabled={isSaving || !adminPassword}>
                                         {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Save Changes"}
                                     </Button>
                                 </DialogFooter>
