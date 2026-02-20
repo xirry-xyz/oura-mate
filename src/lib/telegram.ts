@@ -11,12 +11,21 @@ async function tgPost(method: string, body: Record<string, unknown>) {
     const token = await db.getEnv('TELEGRAM_BOT_TOKEN')
     if (!token) throw new Error('TELEGRAM_BOT_TOKEN not set')
 
-    const res = await fetch(`${TG_API}${token}/${method}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-    })
-    return res.json()
+    try {
+        const res = await fetch(`${TG_API}${token}/${method}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        })
+        const data = await res.json()
+        if (!data.ok) {
+            await db.setConfig('LAST_TG_ERROR', JSON.stringify({ method, body, error: data, time: new Date().toISOString() }))
+        }
+        return data
+    } catch (err: any) {
+        await db.setConfig('LAST_TG_ERROR', JSON.stringify({ method, error: err.message, time: new Date().toISOString() }))
+        throw err
+    }
 }
 
 export async function sendMessage(chatId: string, text: string, parseMode = 'Markdown') {
