@@ -79,12 +79,25 @@ export function StatusDashboard({ status, onRefresh, success, error }: Props) {
                     <CardTitle className="text-lg">Quick Actions</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         <Button variant="outline" className="h-auto flex-col py-4 gap-1" asChild>
                             <a href="https://t.me" target="_blank"><span className="text-lg">💬</span><span className="text-xs">Open Telegram</span><ExternalLink className="h-3 w-3 text-muted-foreground" /></a>
                         </Button>
                         <Button variant="outline" className="h-auto flex-col py-4 gap-1" asChild>
                             <a href="https://cloud.ouraring.com" target="_blank"><span className="text-lg">💍</span><span className="text-xs">Oura Dashboard</span><ExternalLink className="h-3 w-3 text-muted-foreground" /></a>
+                        </Button>
+                        <Button variant="outline" className="h-auto flex-col py-4 gap-1" onClick={async () => {
+                            try {
+                                const btn = document.getElementById('sync-btn')
+                                if (btn) btn.innerHTML = '<span class="text-xs">Syncing...</span>'
+                                await fetch('/api/telegram/setup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setup' }) })
+                                if (btn) btn.innerHTML = '<span class="text-xs text-green-500">Synced!</span>'
+                                setTimeout(() => { if (btn) btn.innerHTML = '<span class="text-lg">🚀</span><span class="text-xs">Sync Webhook</span>' }, 2000)
+                            } catch { }
+                        }}>
+                            <div id="sync-btn" className="flex flex-col items-center gap-1">
+                                <span className="text-lg">🚀</span><span className="text-xs">Sync Webhook</span>
+                            </div>
                         </Button>
                     </div>
                 </CardContent>
