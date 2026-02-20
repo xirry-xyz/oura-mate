@@ -16,14 +16,13 @@
 
 ## Quick Start
 
-### 1. Fork & Deploy
+### One-Click Deploy
 
-1. **Fork** this repo on GitHub
-2. Go to [vercel.com/new](https://vercel.com/new) → **Import** your fork
-3. Add environment variables (see below)
-4. Click **Deploy**
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fxirry-xyz%2Foura-mate&env=TELEGRAM_BOT_TOKEN,TELEGRAM_CHAT_ID,AI_API_KEY,AI_MODEL,OURA_CLIENT_ID,OURA_CLIENT_SECRET&envDescription=API%20keys%20needed%20for%20Oura%20Mate.%20See%20the%20table%20below%20for%20where%20to%20get%20each%20key.&envLink=https%3A%2F%2Fgithub.com%2Fxirry-xyz%2Foura-mate%232-get-your-keys&project-name=oura-mate&repository-name=oura-mate)
 
-### 2. Get Your Keys
+Click the button above → fill in your API keys → Deploy. That's it!
+
+### 1. Get Your Keys
 
 | Key | Where to get it |
 |-----|----------------|
@@ -34,18 +33,18 @@
 | `OURA_CLIENT_ID` | [Oura Developer Portal](https://cloud.ouraring.com/oauth/applications) |
 | `OURA_CLIENT_SECRET` | Same as above |
 
-### 3. Connect Oura
+### 2. Connect Oura
 
 1. Visit your deployed URL → follow the setup wizard
 2. Click **Connect Oura Ring** → authorize
 3. Click **Activate Bot** → webhook registered
 4. Send `/today` in Telegram 🎉
 
-### 4. Optional: Persistent Storage
+### 3. Optional: Persistent Storage
 
 Add [Upstash Redis](https://vercel.com/marketplace/upstash-redis) from Vercel Marketplace for persistent token storage. Without it, tokens are stored in memory and will reset on cold start.
 
-### 5. Optional: Daily Reports
+### 4. Optional: Daily Reports
 
 Vercel Cron sends a daily report at 9 AM Beijing time. Set `CRON_SECRET` in Vercel env for security.
 
