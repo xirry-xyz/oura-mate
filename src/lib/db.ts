@@ -1,5 +1,5 @@
 /**
- * Oura Mate — Upstash Redis storage for tokens and data cache.
+ * Oura Mate — Upstash Redis storage for tokens, config, and data cache.
  * Falls back to in-memory if Redis is not configured.
  */
 
@@ -17,6 +17,20 @@ const KEY_CONFIG = (k: string) => `oura:config:${k}`
 const KEY_DAILY = (d: string) => `oura:daily:${d}`
 const KEY_ANALYSIS = (d: string) => `oura:analysis:${d}`
 
+/** All user-configurable keys */
+export const CONFIG_KEYS = [
+    'TELEGRAM_BOT_TOKEN',
+    'TELEGRAM_CHAT_ID',
+    'AI_API_KEY',
+    'AI_MODEL',
+    'AI_BASE_URL',
+    'OURA_CLIENT_ID',
+    'OURA_CLIENT_SECRET',
+    'ANALYSIS_LANGUAGE',
+] as const
+
+export type ConfigKey = (typeof CONFIG_KEYS)[number]
+
 class Database {
     private redis: Redis | null = null
     private memory: Map<string, string> = new Map()
@@ -31,9 +45,6 @@ class Database {
                 url: process.env.KV_REST_API_URL,
                 token: process.env.KV_REST_API_TOKEN,
             })
-            console.log('[DB] Using Upstash Redis')
-        } else {
-            console.log('[DB] Using in-memory storage (configure KV_REST_API_URL for persistence)')
         }
     }
 
@@ -58,6 +69,51 @@ class Database {
         }
     }
 
+    // --- Config (DB-first, env fallback) ---
+
+    /**
+     * Get a config value. Checks DB first, then env vars.
+     */
+    async getEnv(key: ConfigKey): Promise<string> {
+        const dbVal = await this.get(KEY_CONFIG(key))
+        if (dbVal) return dbVal
+        return process.env[key] || ''
+    }
+
+    async setConfig(key: string, value: string) {
+        await this.set(KEY_CONFIG(key), value)
+    }
+
+    async getConfig(key: string): Promise<string | null> {
+        return this.get(KEY_CONFIG(key))
+    }
+
+    /**
+     * Get all user-configurable values (masked for frontend display).
+     */
+    async getAllConfig(): Promise<Record<string, { set: boolean; masked: string }>> {
+        const result: Record<string, { set: boolean; masked: string }> = {}
+        for (const key of CONFIG_KEYS) {
+            const val = await this.getEnv(key)
+            result[key] = {
+                set: !!val,
+                masked: val ? maskValue(key, val) : '',
+            }
+        }
+        return result
+    }
+
+    /**
+     * Save multiple config values at once.
+     */
+    async saveAllConfig(config: Partial<Record<ConfigKey, string>>) {
+        for (const [key, value] of Object.entries(config)) {
+            if (value !== undefined && value !== '') {
+                await this.setConfig(key, value)
+            }
+        }
+    }
+
     // --- Tokens ---
 
     async saveTokens(accessToken: string, refreshToken: string, expiresAt: string) {
@@ -75,20 +131,10 @@ class Database {
         }
     }
 
-    // --- Config ---
-
-    async setConfig(key: string, value: string) {
-        await this.set(KEY_CONFIG(key), value)
-    }
-
-    async getConfig(key: string): Promise<string | null> {
-        return this.get(KEY_CONFIG(key))
-    }
-
     // --- Daily data cache ---
 
     async saveDailyData(date: string, data: unknown) {
-        await this.set(KEY_DAILY(date), JSON.stringify(data), 86400) // 24h TTL
+        await this.set(KEY_DAILY(date), JSON.stringify(data), 86400)
     }
 
     async getDailyData(date: string): Promise<unknown | null> {
@@ -116,6 +162,13 @@ class Database {
             return null
         }
     }
+}
+
+/** Mask sensitive values for display */
+function maskValue(key: string, value: string): string {
+    if (key === 'AI_MODEL' || key === 'ANALYSIS_LANGUAGE') return value
+    if (value.length <= 8) return '••••••'
+    return value.slice(0, 4) + '••••' + value.slice(-4)
 }
 
 export const db = new Database()

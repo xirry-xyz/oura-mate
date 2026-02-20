@@ -18,9 +18,9 @@
 
 ### One-Click Deploy
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fxirry-xyz%2Foura-mate&env=TELEGRAM_BOT_TOKEN,TELEGRAM_CHAT_ID,AI_API_KEY,AI_MODEL,OURA_CLIENT_ID,OURA_CLIENT_SECRET&envDescription=API%20keys%20needed%20for%20Oura%20Mate.%20See%20the%20table%20below%20for%20where%20to%20get%20each%20key.&envLink=https%3A%2F%2Fgithub.com%2Fxirry-xyz%2Foura-mate%232-get-your-keys&project-name=oura-mate&repository-name=oura-mate)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fxirry-xyz%2Foura-mate&project-name=oura-mate&repository-name=oura-mate)
 
-Click the button above → fill in your API keys → Deploy. That's it!
+Click the button → Deploy → Visit your URL → Fill in API keys in the web UI. That's it!
 
 ### 1. Get Your Keys
 

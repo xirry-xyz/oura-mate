@@ -1,5 +1,6 @@
 /**
  * Oura Mate — Oura API v2 client with OAuth2 + auto token refresh.
+ * Reads config from DB first, falls back to env vars.
  */
 
 import { db } from './db'
@@ -9,9 +10,9 @@ const OURA_TOKEN_URL = 'https://api.ouraring.com/oauth/token'
 const OURA_API_BASE = 'https://api.ouraring.com'
 const OURA_SCOPES = 'daily email personal session heartrate workout spo2'
 
-export function getOuraAuthUrl(redirectUri: string, state: string): string {
+export function getOuraAuthUrl(redirectUri: string, state: string, clientId: string): string {
     const params = new URLSearchParams({
-        client_id: process.env.OURA_CLIENT_ID || '',
+        client_id: clientId,
         response_type: 'code',
         redirect_uri: redirectUri,
         scope: OURA_SCOPES,
@@ -21,6 +22,9 @@ export function getOuraAuthUrl(redirectUri: string, state: string): string {
 }
 
 export async function exchangeOuraCode(code: string, redirectUri: string) {
+    const clientId = await db.getEnv('OURA_CLIENT_ID')
+    const clientSecret = await db.getEnv('OURA_CLIENT_SECRET')
+
     const res = await fetch(OURA_TOKEN_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -28,8 +32,8 @@ export async function exchangeOuraCode(code: string, redirectUri: string) {
             grant_type: 'authorization_code',
             code,
             redirect_uri: redirectUri,
-            client_id: process.env.OURA_CLIENT_ID || '',
-            client_secret: process.env.OURA_CLIENT_SECRET || '',
+            client_id: clientId,
+            client_secret: clientSecret,
         }),
     })
 
@@ -49,14 +53,17 @@ async function refreshToken(): Promise<string> {
     const tokens = await db.getTokens()
     if (!tokens?.refreshToken) throw new Error('No refresh token. Please re-authorize.')
 
+    const clientId = await db.getEnv('OURA_CLIENT_ID')
+    const clientSecret = await db.getEnv('OURA_CLIENT_SECRET')
+
     const res = await fetch(OURA_TOKEN_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
             grant_type: 'refresh_token',
             refresh_token: tokens.refreshToken,
-            client_id: process.env.OURA_CLIENT_ID || '',
-            client_secret: process.env.OURA_CLIENT_SECRET || '',
+            client_id: clientId,
+            client_secret: clientSecret,
         }),
     })
 
@@ -72,7 +79,6 @@ async function getAccessToken(): Promise<string> {
     const tokens = await db.getTokens()
     if (!tokens) throw new Error('Not authorized. Connect Oura first.')
 
-    // Refresh if expired (5 min buffer)
     if (tokens.expiresAt) {
         const exp = new Date(tokens.expiresAt).getTime()
         if (Date.now() > exp - 5 * 60 * 1000) {
@@ -167,61 +173,40 @@ export async function getDailyHealth(targetDate: string): Promise<DailyHealth> {
 
     const health: DailyHealth = { day: targetDate }
 
-    // Parse sleep
     const sd = sleepDaily.data?.[0]
-    const detail = sleepDetail.data?.at(-1) // main sleep period
+    const detail = sleepDetail.data?.at(-1)
     if (sd) {
         const contributors = sd.contributors || {}
         health.sleep = {
-            day: targetDate,
-            score: sd.score,
-            efficiency: contributors.efficiency,
-            restfulness: contributors.restfulness,
-            latency: contributors.latency,
-            totalSleep: detail?.total_sleep_duration,
-            deepSleep: detail?.deep_sleep_duration,
-            remSleep: detail?.rem_sleep_duration,
-            lightSleep: detail?.light_sleep_duration,
-            awakeTime: detail?.awake_time,
-            avgHR: detail?.average_heart_rate,
-            lowestHR: detail?.lowest_heart_rate,
-            avgHRV: detail?.average_hrv,
+            day: targetDate, score: sd.score, efficiency: contributors.efficiency,
+            restfulness: contributors.restfulness, latency: contributors.latency,
+            totalSleep: detail?.total_sleep_duration, deepSleep: detail?.deep_sleep_duration,
+            remSleep: detail?.rem_sleep_duration, lightSleep: detail?.light_sleep_duration,
+            awakeTime: detail?.awake_time, avgHR: detail?.average_heart_rate,
+            lowestHR: detail?.lowest_heart_rate, avgHRV: detail?.average_hrv,
         }
     }
 
-    // Parse activity
     const ad = activity.data?.[0]
     if (ad) {
         health.activity = {
-            day: targetDate,
-            score: ad.score,
-            activeCalories: ad.active_calories,
-            totalCalories: ad.total_calories,
-            steps: ad.steps,
-            distance: ad.equivalent_walking_distance,
-            highActivity: ad.high_activity_time,
-            mediumActivity: ad.medium_activity_time,
-            lowActivity: ad.low_activity_time,
+            day: targetDate, score: ad.score, activeCalories: ad.active_calories,
+            totalCalories: ad.total_calories, steps: ad.steps,
+            distance: ad.equivalent_walking_distance, highActivity: ad.high_activity_time,
+            mediumActivity: ad.medium_activity_time, lowActivity: ad.low_activity_time,
             sedentaryTime: ad.sedentary_time,
         }
     }
 
-    // Parse readiness
     const rd = readiness.data?.[0]
     if (rd) {
         const c = rd.contributors || {}
         health.readiness = {
-            day: targetDate,
-            score: rd.score,
-            tempDeviation: rd.temperature_deviation,
-            activityBalance: c.activity_balance,
-            bodyTemperature: c.body_temperature,
-            hrvBalance: c.hrv_balance,
-            previousDayActivity: c.previous_day_activity,
-            previousNight: c.previous_night,
-            recoveryIndex: c.recovery_index,
-            restingHeartRate: c.resting_heart_rate,
-            sleepBalance: c.sleep_balance,
+            day: targetDate, score: rd.score, tempDeviation: rd.temperature_deviation,
+            activityBalance: c.activity_balance, bodyTemperature: c.body_temperature,
+            hrvBalance: c.hrv_balance, previousDayActivity: c.previous_day_activity,
+            previousNight: c.previous_night, recoveryIndex: c.recovery_index,
+            restingHeartRate: c.resting_heart_rate, sleepBalance: c.sleep_balance,
         }
     }
 
@@ -231,19 +216,13 @@ export async function getDailyHealth(targetDate: string): Promise<DailyHealth> {
 export async function getHealthRange(days: number = 7): Promise<DailyHealth[]> {
     const results: DailyHealth[] = []
     const today = new Date()
-
     for (let i = days - 1; i >= 0; i--) {
         const d = new Date(today)
         d.setDate(d.getDate() - i)
         const dateStr = d.toISOString().split('T')[0]
-        try {
-            const health = await getDailyHealth(dateStr)
-            results.push(health)
-        } catch (e) {
-            console.warn(`Failed to fetch ${dateStr}:`, e)
-        }
+        try { results.push(await getDailyHealth(dateStr)) }
+        catch (e) { console.warn(`Failed to fetch ${dateStr}:`, e) }
     }
-
     return results
 }
 
@@ -263,22 +242,18 @@ function fmtDuration(seconds?: number): string {
 
 export function healthToContext(h: DailyHealth): string {
     const lines = [`📅 Date: ${h.day}`]
-
     if (h.sleep) {
         const s = h.sleep
         lines.push(`💤 Sleep: Score ${s.score ?? '-'} | Total ${fmtDuration(s.totalSleep)} | Deep ${fmtDuration(s.deepSleep)} | REM ${fmtDuration(s.remSleep)} | HRV ${s.avgHRV ?? '-'}ms | HR ${s.avgHR ?? '-'}bpm (low ${s.lowestHR ?? '-'})`)
     }
-
     if (h.activity) {
         const a = h.activity
         lines.push(`🏃 Activity: Score ${a.score ?? '-'} | Steps ${a.steps?.toLocaleString() ?? '-'} | Active Cal ${a.activeCalories ?? '-'} | High ${fmtDuration(a.highActivity)} | Med ${fmtDuration(a.mediumActivity)}`)
     }
-
     if (h.readiness) {
         const r = h.readiness
         lines.push(`⚡ Readiness: Score ${r.score ?? '-'} | HRV Balance ${r.hrvBalance ?? '-'} | RHR ${r.restingHeartRate ?? '-'} | Temp ${r.tempDeviation ? (r.tempDeviation > 0 ? '+' : '') + r.tempDeviation.toFixed(1) + '°' : '-'} | Recovery ${r.recoveryIndex ?? '-'}`)
     }
-
     return lines.join('\n')
 }
 
@@ -293,8 +268,6 @@ export function healthToSummary(h: DailyHealth): string {
         parts.push(`🏃 *Activity Score:* ${h.activity.score ?? '-'}  |  Steps: ${h.activity.steps?.toLocaleString() ?? '-'}`)
         parts.push(`   Active Cal: ${h.activity.activeCalories ?? '-'}  |  Total Cal: ${h.activity.totalCalories ?? '-'}`)
     }
-    if (h.readiness) {
-        parts.push(`⚡ *Readiness Score:* ${h.readiness.score ?? '-'}`)
-    }
+    if (h.readiness) parts.push(`⚡ *Readiness Score:* ${h.readiness.score ?? '-'}`)
     return parts.join('\n')
 }

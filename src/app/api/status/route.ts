@@ -1,37 +1,42 @@
 import { NextResponse } from 'next/server'
+import { db } from '@/lib/db'
 import { isAuthorized } from '@/lib/oura'
 
+/**
+ * GET /api/status — Return config and connection status.
+ */
 export async function GET() {
-    const ouraConnected = await isAuthorized()
+    const [botToken, chatId, aiKey, aiModel, ouraId, ouraSecret] = await Promise.all([
+        db.getEnv('TELEGRAM_BOT_TOKEN'),
+        db.getEnv('TELEGRAM_CHAT_ID'),
+        db.getEnv('AI_API_KEY'),
+        db.getEnv('AI_MODEL'),
+        db.getEnv('OURA_CLIENT_ID'),
+        db.getEnv('OURA_CLIENT_SECRET'),
+    ])
+
+    const ouraAuthorized = await isAuthorized()
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
+        || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
 
     return NextResponse.json({
-        configured: !!(
-            process.env.TELEGRAM_BOT_TOKEN &&
-            process.env.AI_API_KEY &&
-            process.env.OURA_CLIENT_ID
-        ),
+        configured: !!(botToken && chatId && aiKey && ouraId && ouraAuthorized),
         oura: {
-            configured: !!(process.env.OURA_CLIENT_ID && process.env.OURA_CLIENT_SECRET),
-            authorized: ouraConnected,
-            client_id: !!process.env.OURA_CLIENT_ID,
-            client_secret: !!process.env.OURA_CLIENT_SECRET,
+            configured: !!(ouraId && ouraSecret),
+            authorized: ouraAuthorized,
+            client_id: !!ouraId,
+            client_secret: !!ouraSecret,
         },
         telegram: {
-            configured: !!process.env.TELEGRAM_BOT_TOKEN,
-            bot_token: !!process.env.TELEGRAM_BOT_TOKEN,
-            chat_id: !!process.env.TELEGRAM_CHAT_ID,
+            configured: !!(botToken && chatId),
+            bot_token: !!botToken,
+            chat_id: !!chatId,
         },
         ai: {
-            configured: !!process.env.AI_API_KEY,
-            model: process.env.AI_MODEL || 'gpt-4o',
-            api_key: !!process.env.AI_API_KEY,
+            configured: !!(aiKey && aiModel),
+            model: aiModel || 'gpt-4o',
+            api_key: !!aiKey,
         },
-        base_url: getBaseUrl(),
+        base_url: baseUrl,
     })
-}
-
-function getBaseUrl(): string {
-    if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
-    if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL
-    return `http://localhost:${process.env.PORT || 3000}`
 }

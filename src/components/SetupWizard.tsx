@@ -1,12 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle2, Circle, ExternalLink, AlertCircle, PartyPopper, Rocket, Copy, Check } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { CheckCircle2, Circle, ExternalLink, AlertCircle, PartyPopper, Save, Eye, EyeOff, Copy, Check, Loader2 } from "lucide-react"
 
 interface Status {
     configured: boolean
@@ -16,6 +19,10 @@ interface Status {
     base_url: string
 }
 
+interface ConfigValues {
+    [key: string]: { set: boolean; masked: string }
+}
+
 interface SetupWizardProps {
     status: Status | null
     onComplete: () => void
@@ -23,10 +30,91 @@ interface SetupWizardProps {
     error: string | null
 }
 
+const AI_MODELS = [
+    {
+        provider: "OpenAI", models: [
+            { value: "gpt-4o", label: "GPT-4o" },
+            { value: "gpt-4o-mini", label: "GPT-4o Mini" },
+            { value: "gpt-4.1", label: "GPT-4.1" },
+        ]
+    },
+    {
+        provider: "Google Gemini", models: [
+            { value: "gemini-2.5-pro-preview-05-06", label: "Gemini 2.5 Pro" },
+            { value: "gemini-2.5-flash-preview-05-20", label: "Gemini 2.5 Flash" },
+            { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash" },
+        ]
+    },
+    {
+        provider: "Anthropic", models: [
+            { value: "claude-sonnet-4-20250514", label: "Claude Sonnet 4" },
+            { value: "claude-3-5-haiku-20241022", label: "Claude 3.5 Haiku" },
+        ]
+    },
+]
+
 export function SetupWizard({ status, onComplete, success, error }: SetupWizardProps) {
+    const [config, setConfig] = useState<ConfigValues>({})
+    const [form, setForm] = useState({
+        TELEGRAM_BOT_TOKEN: "",
+        TELEGRAM_CHAT_ID: "",
+        AI_API_KEY: "",
+        AI_MODEL: "gpt-4o",
+        OURA_CLIENT_ID: "",
+        OURA_CLIENT_SECRET: "",
+    })
+    const [saving, setSaving] = useState(false)
+    const [saved, setSaved] = useState(false)
     const [connectingOura, setConnectingOura] = useState(false)
     const [settingUpWebhook, setSettingUpWebhook] = useState(false)
+    const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({})
     const [copied, setCopied] = useState("")
+
+    useEffect(() => {
+        fetch("/api/config").then(r => r.json()).then((data: ConfigValues) => {
+            setConfig(data)
+            // Set model from saved config
+            if (data.AI_MODEL?.set && data.AI_MODEL.masked) {
+                setForm(f => ({ ...f, AI_MODEL: data.AI_MODEL.masked }))
+            }
+        }).catch(() => { })
+    }, [])
+
+    const handleSave = async () => {
+        setSaving(true)
+        setSaved(false)
+        try {
+            // Only send non-empty values
+            const payload: Record<string, string> = {}
+            for (const [key, val] of Object.entries(form)) {
+                if (val) payload[key] = val
+            }
+            await fetch("/api/config", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            })
+            setSaved(true)
+            // Refresh config and status
+            const [newConfig] = await Promise.all([
+                fetch("/api/config").then(r => r.json()),
+                onComplete(),
+            ])
+            setConfig(newConfig)
+            // Clear form inputs (keep model)
+            setForm(f => ({
+                TELEGRAM_BOT_TOKEN: "",
+                TELEGRAM_CHAT_ID: "",
+                AI_API_KEY: "",
+                AI_MODEL: f.AI_MODEL,
+                OURA_CLIENT_ID: "",
+                OURA_CLIENT_SECRET: "",
+            }))
+            setTimeout(() => setSaved(false), 3000)
+        } finally {
+            setSaving(false)
+        }
+    }
 
     const handleConnectOura = async () => {
         setConnectingOura(true)
@@ -59,14 +147,49 @@ export function SetupWizard({ status, onComplete, success, error }: SetupWizardP
         setTimeout(() => setCopied(""), 2000)
     }
 
-    const steps = [
-        { id: "telegram", title: "Telegram Bot", completed: status?.telegram?.configured ?? false, icon: "🤖" },
-        { id: "ai", title: "AI Provider", completed: status?.ai?.configured ?? false, icon: "🧠" },
-        { id: "oura", title: "Oura Ring", completed: status?.oura?.authorized ?? false, icon: "💍" },
-        { id: "webhook", title: "Activate Bot", completed: false, icon: "🚀" },
-    ]
+    const toggleSecret = (key: string) => setShowSecrets(s => ({ ...s, [key]: !s[key] }))
 
+    const steps = [
+        { id: "config", title: "Configure", completed: status?.telegram?.configured && status?.ai?.configured, icon: "⚙️" },
+        { id: "oura", title: "Oura Ring", completed: status?.oura?.authorized ?? false, icon: "💍" },
+        { id: "webhook", title: "Activate", completed: false, icon: "🚀" },
+    ]
     const completedCount = steps.filter(s => s.completed).length
+
+    const renderField = (key: string, label: string, placeholder: string, helpLink?: { text: string; url: string }) => {
+        const isSecret = key !== "TELEGRAM_CHAT_ID"
+        const isSet = config[key]?.set
+        const masked = config[key]?.masked || ""
+
+        return (
+            <div className="space-y-2" key={key}>
+                <div className="flex items-center gap-2">
+                    <Label htmlFor={key} className="text-sm font-medium">{label}</Label>
+                    {isSet && <Badge variant="secondary" className="bg-green-500/10 text-green-500 text-[10px] h-5">Set</Badge>}
+                    {helpLink && (
+                        <a href={helpLink.url} target="_blank" className="ml-auto text-xs text-muted-foreground hover:text-primary flex items-center gap-1">
+                            {helpLink.text} <ExternalLink className="h-3 w-3" />
+                        </a>
+                    )}
+                </div>
+                <div className="relative">
+                    <Input
+                        id={key}
+                        type={(isSecret && !showSecrets[key]) ? "password" : "text"}
+                        placeholder={isSet ? masked : placeholder}
+                        value={form[key as keyof typeof form] || ""}
+                        onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+                        className="pr-10 font-mono text-xs"
+                    />
+                    {isSecret && (
+                        <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => toggleSecret(key)}>
+                            {showSecrets[key] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                        </Button>
+                    )}
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="space-y-6">
@@ -92,198 +215,169 @@ export function SetupWizard({ status, onComplete, success, error }: SetupWizardP
             <Card>
                 <CardHeader className="pb-3">
                     <CardTitle className="text-lg">Setup Progress</CardTitle>
-                    <CardDescription>{completedCount}/4 steps completed</CardDescription>
+                    <CardDescription>{completedCount}/3 steps completed</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="flex gap-2">
                         {steps.map((step) => (
-                            <div key={step.id} className={`h-2 flex-1 rounded-full transition-colors ${step.completed ? "bg-green-500" : "bg-muted"}`} />
+                            <div key={step.id} className="flex-1 space-y-1">
+                                <div className={`h-2 rounded-full transition-colors ${step.completed ? "bg-green-500" : "bg-muted"}`} />
+                                <p className="text-[10px] text-muted-foreground text-center">{step.icon} {step.title}</p>
+                            </div>
                         ))}
                     </div>
                 </CardContent>
             </Card>
 
-            {/* Deploy Instructions */}
-            <Card className="border-blue-500/30 bg-blue-500/5">
-                <CardHeader>
-                    <div className="flex items-center gap-3">
-                        <Rocket className="h-5 w-5 text-blue-500" />
-                        <div>
-                            <CardTitle className="text-base">How to Deploy</CardTitle>
-                            <CardDescription className="mt-1">Fork this project to your own Vercel</CardDescription>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent className="pt-0 space-y-4">
-                    <Separator />
-                    <div className="space-y-3 text-sm text-muted-foreground">
-                        <div className="flex gap-3">
-                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-blue-500 text-xs font-bold">1</span>
-                            <p>Go to the <a href="https://github.com/x1rry/oura-mate" target="_blank" className="text-primary underline">GitHub repo</a>, click <strong className="text-foreground">Fork</strong></p>
-                        </div>
-                        <div className="flex gap-3">
-                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-blue-500 text-xs font-bold">2</span>
-                            <p>Go to <a href="https://vercel.com/new" target="_blank" className="text-primary underline">vercel.com/new</a>, click <strong className="text-foreground">Import</strong> your forked repo</p>
-                        </div>
-                        <div className="flex gap-3">
-                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-blue-500 text-xs font-bold">3</span>
-                            <p>Add environment variables (see steps below for each key), then click <strong className="text-foreground">Deploy</strong></p>
-                        </div>
-                        <div className="flex gap-3">
-                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-blue-500 text-xs font-bold">4</span>
-                            <p>Visit your deployed URL to continue setup here</p>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+            {saved && (
+                <Alert className="border-green-500/50 bg-green-500/10">
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <AlertDescription className="text-green-500">Configuration saved! ✓</AlertDescription>
+                </Alert>
+            )}
 
-            {/* Step 1: Telegram */}
-            <Card className={steps[0].completed ? "border-green-500/30" : ""}>
+            {/* Step 1: All Config */}
+            <Card>
                 <CardHeader>
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <span className="text-2xl">{steps[0].icon}</span>
+                            <span className="text-2xl">⚙️</span>
                             <div>
                                 <CardTitle className="text-base flex items-center gap-2">
-                                    Step 1: Telegram Bot
+                                    Step 1: Configuration
                                     {steps[0].completed && <Badge variant="secondary" className="bg-green-500/10 text-green-500 text-xs">Done</Badge>}
                                 </CardTitle>
-                                <CardDescription className="mt-1">Create a Telegram bot</CardDescription>
+                                <CardDescription className="mt-1">Enter your API keys below</CardDescription>
                             </div>
                         </div>
                         {steps[0].completed ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <Circle className="h-5 w-5 text-muted-foreground" />}
                     </div>
                 </CardHeader>
-                {!steps[0].completed && (
-                    <CardContent className="pt-0">
-                        <Separator className="mb-4" />
-                        <div className="space-y-3 text-sm text-muted-foreground">
-                            <p>1. Open Telegram, search <code className="bg-muted px-1.5 py-0.5 rounded text-xs">@BotFather</code></p>
-                            <p>2. Send <code className="bg-muted px-1.5 py-0.5 rounded text-xs">/newbot</code> and follow prompts</p>
-                            <p>3. Copy the token → add as <code className="bg-muted px-1.5 py-0.5 rounded text-xs">TELEGRAM_BOT_TOKEN</code> in Vercel env</p>
-                            <p>4. Message <code className="bg-muted px-1.5 py-0.5 rounded text-xs">@userinfobot</code> to get Chat ID → add as <code className="bg-muted px-1.5 py-0.5 rounded text-xs">TELEGRAM_CHAT_ID</code></p>
+                <CardContent className="pt-0 space-y-6">
+                    <Separator />
+
+                    {/* Telegram */}
+                    <div className="space-y-4">
+                        <h4 className="text-sm font-semibold flex items-center gap-2">🤖 Telegram Bot</h4>
+                        {renderField("TELEGRAM_BOT_TOKEN", "Bot Token", "123456:ABC-DEF...", { text: "@BotFather", url: "https://t.me/BotFather" })}
+                        {renderField("TELEGRAM_CHAT_ID", "Chat ID", "123456789", { text: "@userinfobot", url: "https://t.me/userinfobot" })}
+                    </div>
+
+                    <Separator />
+
+                    {/* AI */}
+                    <div className="space-y-4">
+                        <h4 className="text-sm font-semibold flex items-center gap-2">🧠 AI Provider</h4>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="AI_MODEL" className="text-sm font-medium">Model</Label>
+                            <Select value={form.AI_MODEL} onValueChange={v => setForm(f => ({ ...f, AI_MODEL: v }))}>
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Select a model" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {AI_MODELS.map(group => (
+                                        <div key={group.provider}>
+                                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{group.provider}</div>
+                                            {group.models.map(m => (
+                                                <SelectItem key={m.value} value={m.value}>
+                                                    <span className="flex items-center gap-2">
+                                                        <span>{m.label}</span>
+                                                        <span className="text-[10px] text-muted-foreground font-mono">{m.value}</span>
+                                                    </span>
+                                                </SelectItem>
+                                            ))}
+                                        </div>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
-                        <div className="mt-4 flex gap-2">
-                            <Button variant="outline" size="sm" asChild>
-                                <a href="https://t.me/BotFather" target="_blank"><ExternalLink className="mr-1 h-3 w-3" /> BotFather</a>
-                            </Button>
-                            <Button variant="outline" size="sm" asChild>
-                                <a href="https://t.me/userinfobot" target="_blank"><ExternalLink className="mr-1 h-3 w-3" /> UserInfoBot</a>
+
+                        {renderField("AI_API_KEY", "API Key", "sk-...", {
+                            text: "Get key",
+                            url: form.AI_MODEL.startsWith("gemini")
+                                ? "https://aistudio.google.com"
+                                : form.AI_MODEL.startsWith("claude")
+                                    ? "https://console.anthropic.com"
+                                    : "https://platform.openai.com"
+                        })}
+                    </div>
+
+                    <Separator />
+
+                    {/* Oura */}
+                    <div className="space-y-4">
+                        <h4 className="text-sm font-semibold flex items-center gap-2">💍 Oura Ring</h4>
+                        <p className="text-xs text-muted-foreground">
+                            Create an app at <a href="https://cloud.ouraring.com/oauth/applications" target="_blank" className="text-primary underline">Oura Developer Portal</a>, set Redirect URI to:
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <code className="bg-muted px-2 py-1 rounded text-xs break-all flex-1">{status?.base_url}/api/oura/callback</code>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => copyText(`${status?.base_url}/api/oura/callback`, "redirect")}>
+                                {copied === "redirect" ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
                             </Button>
                         </div>
-                    </CardContent>
-                )}
+                        {renderField("OURA_CLIENT_ID", "Client ID", "XXXXX...")}
+                        {renderField("OURA_CLIENT_SECRET", "Client Secret", "XXXXX...")}
+                    </div>
+
+                    <Separator />
+
+                    {/* Save button */}
+                    <Button onClick={handleSave} disabled={saving} className="w-full">
+                        {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : <><Save className="mr-2 h-4 w-4" /> Save Configuration</>}
+                    </Button>
+                </CardContent>
             </Card>
 
-            {/* Step 2: AI */}
+            {/* Step 2: Connect Oura */}
             <Card className={steps[1].completed ? "border-green-500/30" : ""}>
                 <CardHeader>
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <span className="text-2xl">{steps[1].icon}</span>
+                            <span className="text-2xl">💍</span>
                             <div>
                                 <CardTitle className="text-base flex items-center gap-2">
-                                    Step 2: AI Provider
+                                    Step 2: Connect Oura Ring
                                     {steps[1].completed && <Badge variant="secondary" className="bg-green-500/10 text-green-500 text-xs">Done</Badge>}
                                 </CardTitle>
-                                <CardDescription className="mt-1">Choose an AI model and set API key</CardDescription>
+                                <CardDescription className="mt-1">Authorize access to your health data</CardDescription>
                             </div>
                         </div>
                         {steps[1].completed ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <Circle className="h-5 w-5 text-muted-foreground" />}
                     </div>
                 </CardHeader>
-                {!steps[1].completed && (
-                    <CardContent className="pt-0">
-                        <Separator className="mb-4" />
-                        <div className="space-y-3 text-sm text-muted-foreground">
-                            <p>Pick one provider and add <code className="bg-muted px-1.5 py-0.5 rounded text-xs">AI_API_KEY</code> + <code className="bg-muted px-1.5 py-0.5 rounded text-xs">AI_MODEL</code> in Vercel:</p>
-                            <div className="grid grid-cols-2 gap-2">
-                                {[
-                                    { name: "OpenAI", model: "gpt-4o", url: "https://platform.openai.com" },
-                                    { name: "Google Gemini", model: "gemini-2.0-flash", url: "https://aistudio.google.com" },
-                                    { name: "Anthropic Claude", model: "claude-sonnet-4-20250514", url: "https://console.anthropic.com" },
-                                    { name: "Ollama (local)", model: "ollama/llama3", url: "https://ollama.ai" },
-                                ].map(p => (
-                                    <button key={p.name} onClick={() => copyText(p.model, p.model)} className="rounded-lg border p-3 text-left hover:bg-muted/50 transition-colors">
-                                        <p className="font-medium text-foreground text-xs">{p.name}</p>
-                                        <div className="flex items-center gap-1 mt-1">
-                                            <code className="text-[10px] bg-muted px-1 rounded">{p.model}</code>
-                                            {copied === p.model ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3 text-muted-foreground" />}
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    </CardContent>
-                )}
+                <CardContent className="pt-0">
+                    <Separator className="mb-4" />
+                    {status?.oura?.configured ? (
+                        <Button onClick={handleConnectOura} disabled={connectingOura} className="w-full">
+                            {connectingOura ? "Redirecting..." : "🔗 Connect Oura Ring"}
+                        </Button>
+                    ) : (
+                        <p className="text-sm text-muted-foreground text-center py-2">Save your Oura Client ID/Secret in Step 1 first</p>
+                    )}
+                </CardContent>
             </Card>
 
-            {/* Step 3: Oura */}
-            <Card className={steps[2].completed ? "border-green-500/30" : ""}>
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <span className="text-2xl">{steps[2].icon}</span>
-                            <div>
-                                <CardTitle className="text-base flex items-center gap-2">
-                                    Step 3: Oura Ring
-                                    {steps[2].completed && <Badge variant="secondary" className="bg-green-500/10 text-green-500 text-xs">Done</Badge>}
-                                </CardTitle>
-                                <CardDescription className="mt-1">Connect your Oura Ring</CardDescription>
-                            </div>
-                        </div>
-                        {steps[2].completed ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <Circle className="h-5 w-5 text-muted-foreground" />}
-                    </div>
-                </CardHeader>
-                {!steps[2].completed && (
-                    <CardContent className="pt-0">
-                        <Separator className="mb-4" />
-                        <div className="space-y-3 text-sm text-muted-foreground">
-                            <p>1. Go to <a href="https://cloud.ouraring.com/oauth/applications" target="_blank" className="text-primary underline">Oura Developer Portal</a>, create an app</p>
-                            <p>2. Set Redirect URI to:</p>
-                            <div className="flex items-center gap-2">
-                                <code className="bg-muted px-2 py-1 rounded text-xs break-all flex-1">{status?.base_url}/api/oura/callback</code>
-                                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => copyText(`${status?.base_url}/api/oura/callback`, "redirect")}>
-                                    {copied === "redirect" ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
-                                </Button>
-                            </div>
-                            <p>3. Copy Client ID/Secret → add as <code className="bg-muted px-1.5 py-0.5 rounded text-xs">OURA_CLIENT_ID</code> / <code className="bg-muted px-1.5 py-0.5 rounded text-xs">OURA_CLIENT_SECRET</code> in Vercel, then <strong className="text-foreground">redeploy</strong></p>
-                            <p>4. Click the button below to authorize:</p>
-                        </div>
-                        <div className="mt-4">
-                            {status?.oura?.configured ? (
-                                <Button onClick={handleConnectOura} disabled={connectingOura}>
-                                    {connectingOura ? "Redirecting..." : "🔗 Connect Oura Ring"}
-                                </Button>
-                            ) : (
-                                <Button disabled variant="secondary">Set OURA_CLIENT_ID first, then redeploy</Button>
-                            )}
-                        </div>
-                    </CardContent>
-                )}
-            </Card>
-
-            {/* Step 4: Activate */}
+            {/* Step 3: Activate */}
             <Card>
                 <CardHeader>
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <span className="text-2xl">{steps[3].icon}</span>
+                            <span className="text-2xl">🚀</span>
                             <div>
-                                <CardTitle className="text-base">Step 4: Activate Bot</CardTitle>
-                                <CardDescription className="mt-1">Register the Telegram webhook</CardDescription>
+                                <CardTitle className="text-base">Step 3: Activate Bot</CardTitle>
+                                <CardDescription className="mt-1">Register Telegram webhook</CardDescription>
                             </div>
                         </div>
                     </div>
                 </CardHeader>
                 <CardContent className="pt-0">
                     <Separator className="mb-4" />
-                    <p className="text-sm text-muted-foreground mb-4">
-                        This connects your Telegram bot to this server. After clicking, your bot will start responding to commands.
-                    </p>
                     <Button
                         onClick={handleSetupWebhook}
                         disabled={settingUpWebhook || !status?.telegram?.configured}
+                        className="w-full"
                     >
                         {settingUpWebhook ? "Setting up..." : "⚡ Activate Telegram Bot"}
                     </Button>
@@ -291,7 +385,7 @@ export function SetupWizard({ status, onComplete, success, error }: SetupWizardP
             </Card>
 
             {/* All done */}
-            {completedCount >= 3 && (
+            {completedCount >= 2 && (
                 <Card className="border-green-500/30 bg-green-500/5">
                     <CardContent className="pt-6 text-center">
                         <p className="text-2xl mb-2">🎉</p>

@@ -1,108 +1,77 @@
 /**
  * Oura Mate — Telegram Bot utilities for webhook mode.
+ * Reads bot token from DB first, falls back to env vars.
  */
 
-const TG_API = (method: string) =>
-    `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/${method}`
+import { db } from './db'
 
-export async function sendMessage(
-    chatId: string,
-    text: string,
-    parseMode: string = 'Markdown'
-): Promise<void> {
-    // Telegram has a 4096 char limit
-    const chunks = splitMessage(text, 4000)
+const TG_API = 'https://api.telegram.org/bot'
 
-    for (const chunk of chunks) {
-        try {
-            await fetch(TG_API('sendMessage'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: chatId,
-                    text: chunk,
-                    parse_mode: parseMode,
-                }),
-            })
-        } catch {
-            // Retry without parse_mode if markdown fails
-            await fetch(TG_API('sendMessage'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: chatId,
-                    text: chunk,
-                }),
-            })
-        }
-    }
-}
+async function tgPost(method: string, body: Record<string, unknown>) {
+    const token = await db.getEnv('TELEGRAM_BOT_TOKEN')
+    if (!token) throw new Error('TELEGRAM_BOT_TOKEN not set')
 
-export async function setWebhook(webhookUrl: string): Promise<boolean> {
-    const res = await fetch(TG_API('setWebhook'), {
+    const res = await fetch(`${TG_API}${token}/${method}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            url: webhookUrl,
-            allowed_updates: ['message'],
-        }),
+        body: JSON.stringify(body),
     })
-    const data = await res.json()
-    return data.ok === true
+    return res.json()
 }
 
-export async function deleteWebhook(): Promise<boolean> {
-    const res = await fetch(TG_API('deleteWebhook'), { method: 'POST' })
-    const data = await res.json()
-    return data.ok === true
-}
-
-export async function getWebhookInfo(): Promise<{ url: string; pending_update_count: number }> {
-    const res = await fetch(TG_API('getWebhookInfo'))
-    const data = await res.json()
-    return data.result
-}
-
-function splitMessage(text: string, maxLen: number): string[] {
-    if (text.length <= maxLen) return [text]
+export async function sendMessage(chatId: string, text: string, parseMode = 'Markdown') {
+    // Split long messages
+    const MAX = 4000
+    if (text.length <= MAX) {
+        return tgPost('sendMessage', { chat_id: chatId, text, parse_mode: parseMode })
+    }
 
     const chunks: string[] = []
-    let current = ''
-
-    for (const line of text.split('\n')) {
-        if (current.length + line.length + 1 > maxLen) {
-            chunks.push(current)
-            current = line
-        } else {
-            current += (current ? '\n' : '') + line
+    let remaining = text
+    while (remaining.length > 0) {
+        if (remaining.length <= MAX) {
+            chunks.push(remaining)
+            break
         }
+        let splitAt = remaining.lastIndexOf('\n', MAX)
+        if (splitAt < MAX / 2) splitAt = MAX
+        chunks.push(remaining.slice(0, splitAt))
+        remaining = remaining.slice(splitAt)
     }
-    if (current) chunks.push(current)
 
-    return chunks
+    for (const chunk of chunks) {
+        await tgPost('sendMessage', { chat_id: chatId, text: chunk, parse_mode: parseMode })
+    }
 }
 
-// --- Telegram update types ---
+export async function setWebhook(url: string) {
+    return tgPost('setWebhook', { url, allowed_updates: ['message'] })
+}
+
+export async function deleteWebhook() {
+    return tgPost('deleteWebhook', {})
+}
+
+export async function getWebhookInfo() {
+    const token = await db.getEnv('TELEGRAM_BOT_TOKEN')
+    if (!token) return { ok: false, result: { url: '' } }
+    const res = await fetch(`${TG_API}${token}/getWebhookInfo`)
+    return res.json()
+}
 
 export interface TelegramUpdate {
-    update_id: number
     message?: {
-        message_id: number
-        from?: { id: number; first_name: string; username?: string }
-        chat: { id: number; type: string }
-        date: number
+        chat: { id: number }
         text?: string
-        entities?: { type: string; offset: number; length: number }[]
+        from?: { first_name?: string; username?: string }
     }
 }
 
-export function parseCommand(update: TelegramUpdate): { command: string; args: string } | null {
-    const text = update.message?.text
-    if (!text || !text.startsWith('/')) return null
-
-    const parts = text.split(' ')
-    const command = parts[0].replace(/@\w+/, '').toLowerCase() // remove @botname
-    const args = parts.slice(1).join(' ')
-
-    return { command, args }
+export function parseCommand(text: string): { command: string; args: string } {
+    const trimmed = text.trim()
+    if (!trimmed.startsWith('/')) return { command: '', args: trimmed }
+    const spaceIdx = trimmed.indexOf(' ')
+    if (spaceIdx === -1) return { command: trimmed.split('@')[0].toLowerCase(), args: '' }
+    const cmd = trimmed.slice(0, spaceIdx).split('@')[0].toLowerCase()
+    return { command: cmd, args: trimmed.slice(spaceIdx + 1).trim() }
 }

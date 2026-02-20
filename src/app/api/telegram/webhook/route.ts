@@ -1,122 +1,111 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { sendMessage, parseCommand, type TelegramUpdate } from '@/lib/telegram'
-import { getDailyHealth, getHealthRange, isAuthorized, healthToSummary } from '@/lib/oura'
+import { db } from '@/lib/db'
+import { sendMessage } from '@/lib/telegram'
+import { type TelegramUpdate, parseCommand } from '@/lib/telegram'
+import { getDailyHealth, getHealthRange, healthToSummary, healthToContext } from '@/lib/oura'
 import { analyzeDaily, askQuestion } from '@/lib/ai'
 
+/**
+ * POST /api/telegram/webhook — handle incoming Telegram messages.
+ */
 export async function POST(request: NextRequest) {
     const update: TelegramUpdate = await request.json()
+    const message = update.message
+    if (!message?.text) return NextResponse.json({ ok: true })
 
-    // Verify chat ID authorization
-    const chatId = update.message?.chat.id
-    if (!chatId) return NextResponse.json({ ok: true })
+    const chatId = String(message.chat.id)
+    const allowedChatId = await db.getEnv('TELEGRAM_CHAT_ID')
 
-    const allowedChatId = process.env.TELEGRAM_CHAT_ID
-    if (allowedChatId && String(chatId) !== allowedChatId) {
-        await sendMessage(String(chatId), '⛔ Unauthorized. This bot is private.')
+    // Auth check
+    if (allowedChatId && chatId !== allowedChatId) {
+        await sendMessage(chatId, '⛔ Unauthorized.')
         return NextResponse.json({ ok: true })
     }
 
-    const parsed = parseCommand(update)
-    if (!parsed) return NextResponse.json({ ok: true })
-
-    const cid = String(chatId)
+    const { command, args } = parseCommand(message.text)
+    const today = new Date().toISOString().split('T')[0]
 
     try {
-        switch (parsed.command) {
+        switch (command) {
             case '/start':
-            case '/help':
-                await sendMessage(cid,
-                    '👋 *Welcome to Oura Mate!*\n\n' +
-                    'I analyze your Oura Ring data with AI.\n\n' +
-                    '📋 *Commands:*\n' +
-                    '/today — AI health analysis\n' +
-                    '/sleep — Sleep data\n' +
-                    '/activity — Activity data\n' +
-                    '/week — 7-day trend\n' +
-                    '/ask — Ask about your health\n' +
-                    '/help — Show this message'
-                )
+            case '/help': {
+                const helpText = [
+                    '🔮 *Oura Mate — AI Health Analyzer*\n',
+                    '📋 *Available Commands:*',
+                    '/today — AI health analysis',
+                    '/sleep — Detailed sleep data',
+                    '/activity — Activity summary',
+                    '/week — 7-day trend analysis',
+                    '/ask — Ask about your health',
+                    '/help — Show this message',
+                ].join('\n')
+                await sendMessage(chatId, helpText)
                 break
+            }
 
-            case '/today':
-                if (!await isAuthorized()) {
-                    await sendMessage(cid, '⚠️ Oura not connected. Visit the setup page to authorize.')
-                    break
-                }
-                await sendMessage(cid, '🔄 Analyzing your health data...')
-                const todayStr = new Date().toISOString().split('T')[0]
-                const todayHealth = await getDailyHealth(todayStr)
+            case '/today': {
+                await sendMessage(chatId, '🔄 Analyzing health data...')
+                const health = await getDailyHealth(today)
                 const history = await getHealthRange(7)
-                const analysis = await analyzeDaily(todayHealth, history)
-                await sendMessage(cid, analysis)
+                const analysis = await analyzeDaily(health, history)
+                await sendMessage(chatId, analysis)
                 break
+            }
 
-            case '/sleep':
-                if (!await isAuthorized()) {
-                    await sendMessage(cid, '⚠️ Oura not connected.')
-                    break
-                }
-                const sleepDate = new Date().toISOString().split('T')[0]
-                const sleepHealth = await getDailyHealth(sleepDate)
-                if (sleepHealth.sleep) {
-                    await sendMessage(cid, `💤 *Sleep Report*\n\n${healthToSummary({ day: sleepDate, sleep: sleepHealth.sleep })}`)
+            case '/sleep': {
+                const health = await getDailyHealth(today)
+                if (!health.sleep) {
+                    await sendMessage(chatId, '❌ No sleep data for today.')
                 } else {
-                    await sendMessage(cid, '📭 No sleep data available yet.')
+                    await sendMessage(chatId, `💤 *Sleep Data — ${today}*\n\n${healthToSummary({ day: today, sleep: health.sleep })}`)
                 }
                 break
+            }
 
-            case '/activity':
-                if (!await isAuthorized()) {
-                    await sendMessage(cid, '⚠️ Oura not connected.')
-                    break
-                }
-                const actDate = new Date().toISOString().split('T')[0]
-                const actHealth = await getDailyHealth(actDate)
-                if (actHealth.activity) {
-                    await sendMessage(cid, `🏃 *Activity Report*\n\n${healthToSummary({ day: actDate, activity: actHealth.activity })}`)
+            case '/activity': {
+                const health = await getDailyHealth(today)
+                if (!health.activity) {
+                    await sendMessage(chatId, '❌ No activity data for today.')
                 } else {
-                    await sendMessage(cid, '📭 No activity data available yet.')
+                    await sendMessage(chatId, `🏃 *Activity — ${today}*\n\n${healthToSummary({ day: today, activity: health.activity })}`)
                 }
                 break
+            }
 
-            case '/week':
-                if (!await isAuthorized()) {
-                    await sendMessage(cid, '⚠️ Oura not connected.')
+            case '/week': {
+                await sendMessage(chatId, '🔄 Analyzing 7-day trend...')
+                const history = await getHealthRange(7)
+                if (!history.length) {
+                    await sendMessage(chatId, '❌ No data available.')
                     break
                 }
-                await sendMessage(cid, '🔄 Analyzing 7-day trend...')
-                const weekHistory = await getHealthRange(7)
-                if (weekHistory.length === 0) {
-                    await sendMessage(cid, '📭 No data for the past 7 days.')
-                    break
+                let text = '📊 *7-Day Health Trend*\n\n'
+                for (const h of history) {
+                    text += `*${h.day}*\n${healthToContext(h)}\n\n`
                 }
-                const weekAnalysis = await analyzeDaily(weekHistory[weekHistory.length - 1], weekHistory)
-                await sendMessage(cid, `📈 *7-Day Trend Analysis*\n\n${weekAnalysis}`)
+                await sendMessage(chatId, text)
                 break
+            }
 
-            case '/ask':
-                if (!await isAuthorized()) {
-                    await sendMessage(cid, '⚠️ Oura not connected.')
+            case '/ask': {
+                if (!args) {
+                    await sendMessage(chatId, '💡 Usage: /ask <your question>\n\nExample: /ask How is my sleep quality trending?')
                     break
                 }
-                if (!parsed.args) {
-                    await sendMessage(cid, '💬 Usage: /ask <your question>\n\nExample: /ask 为什么我昨晚深睡这么少？')
-                    break
-                }
-                await sendMessage(cid, '🤔 Thinking...')
-                const askDate = new Date().toISOString().split('T')[0]
-                const askHealth = await getDailyHealth(askDate)
-                const askHistory = await getHealthRange(7)
-                const answer = await askQuestion(parsed.args, askHealth, askHistory)
-                await sendMessage(cid, answer)
+                await sendMessage(chatId, '🤔 Thinking...')
+                const health = await getDailyHealth(today)
+                const history = await getHealthRange(7)
+                const answer = await askQuestion(args, health, history)
+                await sendMessage(chatId, answer)
                 break
+            }
 
             default:
-                await sendMessage(cid, '❓ Unknown command. Send /help for available commands.')
+                await sendMessage(chatId, `❓ Unknown command. Send /help for available commands.`)
         }
     } catch (e) {
-        console.error('Bot error:', e)
-        await sendMessage(cid, `❌ Error: ${e instanceof Error ? e.message : String(e)}`)
+        console.error('Telegram command error:', e)
+        await sendMessage(chatId, `⚠️ Error: ${e instanceof Error ? e.message : 'Unknown error'}`)
     }
 
     return NextResponse.json({ ok: true })

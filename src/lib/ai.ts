@@ -1,5 +1,6 @@
 /**
  * Oura Mate — AI analysis using Vercel AI SDK for multi-provider support.
+ * Reads config from DB first, falls back to env vars.
  */
 
 import { generateText } from 'ai'
@@ -12,45 +13,35 @@ import type { DailyHealth } from './oura'
 import { healthToContext } from './oura'
 
 const LANG_MAP: Record<string, string> = {
-    zh: 'Chinese (Simplified)',
-    en: 'English',
-    ja: 'Japanese',
-    ko: 'Korean',
-    es: 'Spanish',
-    fr: 'French',
-    de: 'German',
+    zh: 'Chinese (Simplified)', en: 'English', ja: 'Japanese',
+    ko: 'Korean', es: 'Spanish', fr: 'French', de: 'German',
 }
 
-function getModel() {
-    const modelName = process.env.AI_MODEL || 'gpt-4o'
-    const apiKey = process.env.AI_API_KEY || ''
-    const baseUrl = process.env.AI_BASE_URL || undefined
+async function getModel() {
+    const modelName = await db.getEnv('AI_MODEL') || 'gpt-4o'
+    const apiKey = await db.getEnv('AI_API_KEY')
+    const baseUrl = await db.getEnv('AI_BASE_URL') || undefined
 
-    // Detect provider from model name
-    if (modelName.startsWith('gemini/') || modelName.startsWith('models/')) {
-        const name = modelName.replace('gemini/', '')
+    // Gemini models
+    if (modelName.startsWith('gemini')) {
         const google = createGoogleGenerativeAI({ apiKey })
-        return google(name)
+        return google(modelName)
     }
 
-    if (modelName.startsWith('claude-') || modelName.startsWith('anthropic/')) {
-        const name = modelName.replace('anthropic/', '')
+    // Claude models
+    if (modelName.startsWith('claude')) {
         const anthropic = createAnthropic({ apiKey })
-        return anthropic(name)
+        return anthropic(modelName)
     }
 
-    // Default: OpenAI-compatible (also works for Ollama, Azure, etc.)
+    // Default: OpenAI-compatible
     const openai = createOpenAI({ apiKey, baseURL: baseUrl })
     return openai(modelName)
 }
 
 function computeAverages(history: DailyHealth[]): string {
-    const sleepScores: number[] = []
-    const activityScores: number[] = []
-    const readinessScores: number[] = []
-    const stepsList: number[] = []
-    const hrvList: number[] = []
-    const rhrList: number[] = []
+    const sleepScores: number[] = [], activityScores: number[] = [], readinessScores: number[] = []
+    const stepsList: number[] = [], hrvList: number[] = [], rhrList: number[] = []
 
     for (const h of history) {
         if (h.sleep?.score != null) sleepScores.push(h.sleep.score)
@@ -63,41 +54,37 @@ function computeAverages(history: DailyHealth[]): string {
 
     const avg = (arr: number[]) => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length) : null
     const parts: string[] = []
-
     const sa = avg(sleepScores); if (sa) parts.push(`Avg Sleep Score: ${sa.toFixed(0)}`)
     const aa = avg(activityScores); if (aa) parts.push(`Avg Activity Score: ${aa.toFixed(0)}`)
     const ra = avg(readinessScores); if (ra) parts.push(`Avg Readiness Score: ${ra.toFixed(0)}`)
     const st = avg(stepsList); if (st) parts.push(`Avg Steps: ${st.toLocaleString(undefined, { maximumFractionDigits: 0 })}`)
     const hv = avg(hrvList); if (hv) parts.push(`Avg HRV: ${hv.toFixed(0)}ms`)
     const rh = avg(rhrList); if (rh) parts.push(`Avg Resting HR: ${rh.toFixed(0)}bpm`)
-
     return parts.length ? parts.join('\n') : 'Insufficient data for averages.'
 }
 
-export async function analyzeDaily(
-    today: DailyHealth,
-    history?: DailyHealth[]
-): Promise<string> {
+export async function analyzeDaily(today: DailyHealth, history?: DailyHealth[]): Promise<string> {
     const todayData = healthToContext(today)
-
     let trendData = 'No historical data available.'
     if (history && history.length > 1) {
-        const trendLines = history.map(h => healthToContext(h))
-        trendData = trendLines.join('\n\n') + '\n\n--- 7-Day Averages ---\n' + computeAverages(history)
+        trendData = history.map(h => healthToContext(h)).join('\n\n') + '\n\n--- 7-Day Averages ---\n' + computeAverages(history)
     }
 
-    const language = LANG_MAP[process.env.ANALYSIS_LANGUAGE || 'zh'] || process.env.ANALYSIS_LANGUAGE || 'Chinese'
+    const langCode = await db.getEnv('ANALYSIS_LANGUAGE') || 'zh'
+    const language = LANG_MAP[langCode] || langCode
     const prompt = getDailyAnalysisPrompt(language, todayData, trendData)
 
     try {
+        const model = await getModel()
         const { text } = await generateText({
-            model: getModel(),
+            model,
             system: 'You are a professional health analyst specializing in wearable data.',
             prompt,
             maxOutputTokens: 2000,
             temperature: 0.7,
         })
-        await db.saveAnalysis(today.day, text, process.env.AI_MODEL || 'gpt-4o')
+        const modelName = await db.getEnv('AI_MODEL') || 'gpt-4o'
+        await db.saveAnalysis(today.day, text, modelName)
         return text
     } catch (e) {
         console.error('AI analysis failed:', e)
@@ -105,21 +92,17 @@ export async function analyzeDaily(
     }
 }
 
-export async function askQuestion(
-    question: string,
-    today: DailyHealth,
-    history?: DailyHealth[]
-): Promise<string> {
+export async function askQuestion(question: string, today: DailyHealth, history?: DailyHealth[]): Promise<string> {
     let context = `Today's health data:\n${healthToContext(today)}`
-    if (history) {
-        context += '\n\nRecent history:\n' + history.slice(-7).map(h => healthToContext(h)).join('\n')
-    }
+    if (history) context += '\n\nRecent history:\n' + history.slice(-7).map(h => healthToContext(h)).join('\n')
 
-    const language = LANG_MAP[process.env.ANALYSIS_LANGUAGE || 'zh'] || 'Chinese'
+    const langCode = await db.getEnv('ANALYSIS_LANGUAGE') || 'zh'
+    const language = LANG_MAP[langCode] || langCode
 
     try {
+        const model = await getModel()
         const { text } = await generateText({
-            model: getModel(),
+            model,
             system: `You are a health analyst with access to the user's Oura Ring data. Answer their questions based on the data provided. Respond in ${language}. Be specific and use numbers.`,
             prompt: `My health data:\n${context}\n\nQuestion: ${question}`,
             maxOutputTokens: 1500,

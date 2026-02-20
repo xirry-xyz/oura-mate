@@ -1,23 +1,23 @@
 import { NextResponse } from 'next/server'
-import { getOuraAuthUrl } from '@/lib/oura'
 import { db } from '@/lib/db'
+import { getOuraAuthUrl } from '@/lib/oura'
 
+/**
+ * GET /api/oura/auth — generate OAuth2 authorization URL.
+ */
 export async function GET() {
-    if (!process.env.OURA_CLIENT_ID || !process.env.OURA_CLIENT_SECRET) {
-        return NextResponse.json({ error: 'Oura Client ID/Secret not configured' }, { status: 400 })
-    }
+    const clientId = await db.getEnv('OURA_CLIENT_ID')
+    if (!clientId) return NextResponse.json({ error: 'OURA_CLIENT_ID not configured' }, { status: 400 })
 
-    const baseUrl = process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : process.env.NEXT_PUBLIC_BASE_URL || `http://localhost:${process.env.PORT || 3000}`
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
+        || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
 
     const redirectUri = `${baseUrl}/api/oura/callback`
+    const state = Math.random().toString(36).slice(2)
 
-    // Generate CSRF state token
-    const state = crypto.randomUUID()
-    await db.setConfig('oauth_state', state)
+    // Save state for CSRF check
+    await db.setConfig('oura_oauth_state', state)
 
-    const authUrl = getOuraAuthUrl(redirectUri, state)
-
+    const authUrl = getOuraAuthUrl(redirectUri, state, clientId)
     return NextResponse.json({ auth_url: authUrl })
 }
