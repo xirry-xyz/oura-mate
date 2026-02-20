@@ -1,11 +1,11 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { isAuthorized } from '@/lib/oura'
 
 /**
  * GET /api/status — Return config and connection status.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
     const [botToken, chatId, aiKey, aiModel, ouraId, ouraSecret] = await Promise.all([
         db.getEnv('TELEGRAM_BOT_TOKEN'),
         db.getEnv('TELEGRAM_CHAT_ID'),
@@ -16,8 +16,11 @@ export async function GET() {
     ])
 
     const ouraAuthorized = await isAuthorized()
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
-        || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+
+    // Dynamically determine base URL from request to support forked deployments correctly
+    const protocol = request.headers.get('x-forwarded-proto') || 'http'
+    const host = request.headers.get('host') || 'localhost:3000'
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `${protocol}://${host}`
 
     return NextResponse.json({
         configured: !!(botToken && chatId && aiKey && ouraId && ouraAuthorized),
