@@ -18,6 +18,17 @@ export async function GET(request: Request) {
     const chatId = await db.getEnv('TELEGRAM_CHAT_ID')
     if (!chatId) return NextResponse.json({ error: 'TELEGRAM_CHAT_ID not set' }, { status: 400 })
 
+    const targetHour = parseInt(await db.getEnv('CRON_SCHEDULE_TIME') || '8', 10)
+    const targetTz = await db.getEnv('CRON_TIMEZONE') || 'Asia/Shanghai'
+
+    // Get current hour in user's timezone
+    const nowLocal = new Date().toLocaleString("en-US", { timeZone: targetTz })
+    const currentHour = new Date(nowLocal).getHours()
+
+    if (currentHour !== targetHour) {
+        return NextResponse.json({ ok: true, skipped: true, reason: `Current hour ${currentHour} != target ${targetHour}` })
+    }
+
     try {
         const today = new Date().toISOString().split('T')[0]
         const health = await getDailyHealth(today)

@@ -100,8 +100,18 @@ export async function POST(request: NextRequest) {
                 break
             }
 
-            default:
-                await sendMessage(chatId, `❓ Unknown command. Send /help for available commands.`)
+            default: {
+                if (command === '' && message.text) {
+                    await sendMessage(chatId, '🤔 Thinking...')
+                    const health = await getDailyHealth(today)
+                    const history = await getHealthRange(7)
+                    const answer = await askQuestion(message.text, health, history)
+                    await sendMessage(chatId, answer)
+                } else {
+                    await sendMessage(chatId, `❓ Unknown command. Send /help for available commands.`)
+                }
+                break
+            }
         }
     } catch (e) {
         console.error('Telegram command error:', e)

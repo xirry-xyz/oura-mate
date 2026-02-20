@@ -18,6 +18,7 @@ interface Status {
     telegram: { configured: boolean }
     ai: { configured: boolean; model: string }
     base_url: string
+    config?: Record<string, any>
 }
 
 const AI_MODELS = [
@@ -40,6 +41,9 @@ export function StatusDashboard({ status, onRefresh, success, error }: Props) {
     const [tgToken, setTgToken] = useState("")
     const [tgChatId, setTgChatId] = useState("")
     const [aiApiKey, setAiApiKey] = useState("")
+    const [language, setLanguage] = useState(status.config?.ANALYSIS_LANGUAGE || "zh")
+    const [cronTime, setCronTime] = useState(status.config?.CRON_SCHEDULE_TIME || "8")
+    const [cronTz, setCronTz] = useState(status.config?.CRON_TIMEZONE || "Asia/Shanghai")
     const [isSaving, setIsSaving] = useState(false)
     const [saveError, setSaveError] = useState("")
 
@@ -47,7 +51,12 @@ export function StatusDashboard({ status, onRefresh, success, error }: Props) {
         setIsSaving(true)
         setSaveError("")
         try {
-            const body: Record<string, string> = { AI_MODEL: aiModel }
+            const body: Record<string, string> = {
+                AI_MODEL: aiModel,
+                ANALYSIS_LANGUAGE: language,
+                CRON_SCHEDULE_TIME: cronTime,
+                CRON_TIMEZONE: cronTz
+            }
             if (aiApiKey) body.AI_API_KEY = aiApiKey
             if (tgToken) body.TELEGRAM_BOT_TOKEN = tgToken
             if (tgChatId) body.TELEGRAM_CHAT_ID = tgChatId
@@ -182,6 +191,42 @@ export function StatusDashboard({ status, onRefresh, success, error }: Props) {
                                         <Label>New AI API Key</Label>
                                         <Input type="password" placeholder="sk-..." value={aiApiKey} onChange={(e) => setAiApiKey(e.target.value)} />
                                         <p className="text-[10px] text-muted-foreground">Leave blank to keep the existing API key.</p>
+                                    </div>
+                                    <div className="space-y-2 pt-2 border-t">
+                                        <Label>Output Language</Label>
+                                        <Select value={language} onValueChange={setLanguage}>
+                                            <SelectTrigger><SelectValue placeholder="Select Language" /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="zh">中文 (Chinese)</SelectItem>
+                                                <SelectItem value="en">English</SelectItem>
+                                                <SelectItem value="ja">日本語 (Japanese)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label>Daily Report Time</Label>
+                                            <Select value={cronTime} onValueChange={setCronTime}>
+                                                <SelectTrigger><SelectValue placeholder="Hour" /></SelectTrigger>
+                                                <SelectContent>
+                                                    {Array.from({ length: 24 }).map((_, i) => (
+                                                        <SelectItem key={i} value={String(i)}>{String(i).padStart(2, '0')}:00</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Timezone</Label>
+                                            <Select value={cronTz} onValueChange={setCronTz}>
+                                                <SelectTrigger><SelectValue placeholder="Timezone" /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="Asia/Shanghai">Beijing (UTC+8)</SelectItem>
+                                                    <SelectItem value="America/New_York">New York (EST)</SelectItem>
+                                                    <SelectItem value="America/Los_Angeles">Los Angeles (PST)</SelectItem>
+                                                    <SelectItem value="Europe/London">London (GMT)</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
                                     </div>
                                     <div className="space-y-2 pt-2 border-t">
                                         <Label>New Telegram Bot Token</Label>

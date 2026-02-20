@@ -27,6 +27,8 @@ export const CONFIG_KEYS = [
     'OURA_CLIENT_ID',
     'OURA_CLIENT_SECRET',
     'ANALYSIS_LANGUAGE',
+    'CRON_SCHEDULE_TIME',
+    'CRON_TIMEZONE',
 ] as const
 
 export type ConfigKey = (typeof CONFIG_KEYS)[number]
@@ -176,7 +178,7 @@ class Database {
 
 /** Mask sensitive values for display */
 function maskValue(key: string, value: string): string {
-    if (key === 'AI_MODEL' || key === 'ANALYSIS_LANGUAGE') return value
+    if (key === 'AI_MODEL' || key === 'ANALYSIS_LANGUAGE' || key === 'CRON_SCHEDULE_TIME' || key === 'CRON_TIMEZONE') return value
     return '••••已配置'
 }
 
