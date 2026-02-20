@@ -10,9 +10,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Bot token not configured' }, { status: 400 })
     }
 
-    const baseUrl = process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : process.env.NEXT_PUBLIC_BASE_URL || `http://localhost:3000`
+    const host = request.headers.get("x-forwarded-host") || request.headers.get("host")
+    const protocol = request.headers.get("x-forwarded-proto") || "https"
+    const baseUrl = host ? `${protocol}://${host}` : (process.env.NEXT_PUBLIC_BASE_URL || `https://${process.env.VERCEL_URL}`)
 
     const webhookUrl = `${baseUrl}/api/telegram/webhook`
 
