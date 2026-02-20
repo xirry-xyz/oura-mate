@@ -76,8 +76,12 @@ export default function Home() {
         )}
 
         {/* Footer */}
-        <div className="mt-12 text-center text-xs text-muted-foreground">
-          <p>Open source · Self-hosted · Your data, your control</p>
+        <div className="mt-12 flex items-center justify-center gap-1 text-center text-xs text-muted-foreground">
+          <p>Open source under MIT License</p>
+          <span>·</span>
+          <p>
+            Built by <a href="https://x.com/x1rry" target="_blank" rel="noopener noreferrer" className="hover:text-foreground underline underline-offset-2 transition-colors">@x1rry</a>
+          </p>
         </div>
       </div>
     </div>

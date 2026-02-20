@@ -150,8 +150,12 @@ export default function LandingClient({ hasPassword }: { hasPassword?: boolean }
                 </div>
             </main>
 
-            <footer className="py-6 text-center text-xs text-muted-foreground">
+            <footer className="py-6 text-center text-xs text-muted-foreground flex items-center justify-center gap-1">
                 <p>{t.footer}</p>
+                <span>·</span>
+                <p>
+                    Built by <a href="https://x.com/x1rry" target="_blank" rel="noopener noreferrer" className="hover:text-foreground underline underline-offset-2 transition-colors">@x1rry</a>
+                </p>
             </footer>
         </div>
     )
