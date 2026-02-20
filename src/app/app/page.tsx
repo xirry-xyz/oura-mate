@@ -61,8 +61,8 @@ export default function Home() {
 
         {/* Header */}
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold tracking-tight flex items-center justify-center gap-2">
-            <span className="text-4xl">🔮</span> Oura Mate
+          <h1 className="text-3xl font-bold tracking-tight flex items-center justify-center gap-3">
+            <img src="/logo.svg" alt="Oura Mate Logo" className="h-10 w-auto" /> Oura Mate
           </h1>
           <p className="mt-2 text-muted-foreground">
             AI-Powered Daily Health Analysis
