@@ -76,7 +76,7 @@ class Database {
      */
     async getEnv(key: ConfigKey): Promise<string> {
         const dbVal = await this.get(KEY_CONFIG(key))
-        if (dbVal) return dbVal
+        if (dbVal !== null && dbVal !== undefined) return String(dbVal)
         return process.env[key] || ''
     }
 
