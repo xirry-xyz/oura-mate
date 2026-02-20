@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation"
 import { headers } from "next/headers"
+
+export const dynamic = "force-dynamic"
 import { db } from "@/lib/db"
 import LandingClient from "./LandingClient"
 
