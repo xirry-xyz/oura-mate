@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🔮 Oura Mate
 
-## Getting Started
+> AI-powered daily health analysis from your Oura Ring, delivered via Telegram Bot.
+> 
+> Deploy your own in 5 minutes. No server needed.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- 💍 **Oura Ring** — Sleep, activity, readiness, HRV, heart rate via OAuth2
+- 🧠 **Multi-AI** — OpenAI, Gemini, Claude (via [Vercel AI SDK](https://sdk.vercel.ai))
+- 🤖 **Telegram Bot** — Interactive commands for instant health insights
+- 📈 **7-Day Trends** — Rolling averages and personal baselines
+- 🌐 **Web Setup Wizard** — Zero-code configuration
+- ⏰ **Daily Reports** — Automated morning insights via Vercel Cron
+- 🔒 **Self-Hosted** — Your own Vercel instance, your data
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Quick Start
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 1. Fork & Deploy
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **Fork** this repo on GitHub
+2. Go to [vercel.com/new](https://vercel.com/new) → **Import** your fork
+3. Add environment variables (see below)
+4. Click **Deploy**
 
-## Learn More
+### 2. Get Your Keys
 
-To learn more about Next.js, take a look at the following resources:
+| Key | Where to get it |
+|-----|----------------|
+| `TELEGRAM_BOT_TOKEN` | [@BotFather](https://t.me/BotFather) → `/newbot` |
+| `TELEGRAM_CHAT_ID` | [@userinfobot](https://t.me/userinfobot) |
+| `AI_API_KEY` | [OpenAI](https://platform.openai.com) / [Google AI Studio](https://aistudio.google.com) / [Anthropic](https://console.anthropic.com) |
+| `AI_MODEL` | `gpt-4o` / `gemini-2.0-flash` / `claude-sonnet-4-20250514` |
+| `OURA_CLIENT_ID` | [Oura Developer Portal](https://cloud.ouraring.com/oauth/applications) |
+| `OURA_CLIENT_SECRET` | Same as above |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 3. Connect Oura
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Visit your deployed URL → follow the setup wizard
+2. Click **Connect Oura Ring** → authorize
+3. Click **Activate Bot** → webhook registered
+4. Send `/today` in Telegram 🎉
 
-## Deploy on Vercel
+### 4. Optional: Persistent Storage
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Add [Upstash Redis](https://vercel.com/marketplace/upstash-redis) from Vercel Marketplace for persistent token storage. Without it, tokens are stored in memory and will reset on cold start.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 5. Optional: Daily Reports
+
+Vercel Cron sends a daily report at 9 AM Beijing time. Set `CRON_SECRET` in Vercel env for security.
+
+## Telegram Commands
+
+| Command | Description |
+|---------|------------|
+| `/today` | AI health analysis for today |
+| `/sleep` | Detailed sleep data |
+| `/activity` | Activity summary |
+| `/week` | 7-day trend analysis |
+| `/ask <question>` | Free-form health Q&A |
+| `/help` | Show all commands |
+
+## Tech Stack
+
+- **Framework**: Next.js 15 (App Router)
+- **UI**: shadcn/ui + Tailwind CSS
+- **AI**: Vercel AI SDK
+- **Storage**: Upstash Redis
+- **Deploy**: Vercel
+- **Cron**: Vercel Cron Jobs
+
+## License
+
+MIT

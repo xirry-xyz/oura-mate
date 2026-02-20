@@ -1,0 +1,121 @@
+/**
+ * Oura Mate — Upstash Redis storage for tokens and data cache.
+ * Falls back to in-memory if Redis is not configured.
+ */
+
+import { Redis } from '@upstash/redis'
+
+interface OAuthTokens {
+    accessToken: string
+    refreshToken: string
+    expiresAt: string
+}
+
+// Keys
+const KEY_TOKENS = 'oura:tokens'
+const KEY_CONFIG = (k: string) => `oura:config:${k}`
+const KEY_DAILY = (d: string) => `oura:daily:${d}`
+const KEY_ANALYSIS = (d: string) => `oura:analysis:${d}`
+
+class Database {
+    private redis: Redis | null = null
+    private memory: Map<string, string> = new Map()
+    private initialized = false
+
+    private init() {
+        if (this.initialized) return
+        this.initialized = true
+
+        if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+            this.redis = new Redis({
+                url: process.env.KV_REST_API_URL,
+                token: process.env.KV_REST_API_TOKEN,
+            })
+            console.log('[DB] Using Upstash Redis')
+        } else {
+            console.log('[DB] Using in-memory storage (configure KV_REST_API_URL for persistence)')
+        }
+    }
+
+    private async get(key: string): Promise<string | null> {
+        this.init()
+        if (this.redis) {
+            return this.redis.get<string>(key)
+        }
+        return this.memory.get(key) ?? null
+    }
+
+    private async set(key: string, value: string, ttlSeconds?: number): Promise<void> {
+        this.init()
+        if (this.redis) {
+            if (ttlSeconds) {
+                await this.redis.set(key, value, { ex: ttlSeconds })
+            } else {
+                await this.redis.set(key, value)
+            }
+        } else {
+            this.memory.set(key, value)
+        }
+    }
+
+    // --- Tokens ---
+
+    async saveTokens(accessToken: string, refreshToken: string, expiresAt: string) {
+        const tokens: OAuthTokens = { accessToken, refreshToken, expiresAt }
+        await this.set(KEY_TOKENS, JSON.stringify(tokens))
+    }
+
+    async getTokens(): Promise<OAuthTokens | null> {
+        const raw = await this.get(KEY_TOKENS)
+        if (!raw) return null
+        try {
+            return typeof raw === 'string' ? JSON.parse(raw) : raw as unknown as OAuthTokens
+        } catch {
+            return null
+        }
+    }
+
+    // --- Config ---
+
+    async setConfig(key: string, value: string) {
+        await this.set(KEY_CONFIG(key), value)
+    }
+
+    async getConfig(key: string): Promise<string | null> {
+        return this.get(KEY_CONFIG(key))
+    }
+
+    // --- Daily data cache ---
+
+    async saveDailyData(date: string, data: unknown) {
+        await this.set(KEY_DAILY(date), JSON.stringify(data), 86400) // 24h TTL
+    }
+
+    async getDailyData(date: string): Promise<unknown | null> {
+        const raw = await this.get(KEY_DAILY(date))
+        if (!raw) return null
+        try {
+            return typeof raw === 'string' ? JSON.parse(raw) : raw
+        } catch {
+            return null
+        }
+    }
+
+    // --- Analysis history ---
+
+    async saveAnalysis(date: string, analysis: string, model: string) {
+        await this.set(KEY_ANALYSIS(date), JSON.stringify({ analysis, model, timestamp: new Date().toISOString() }))
+    }
+
+    async getAnalysis(date: string): Promise<{ analysis: string; model: string } | null> {
+        const raw = await this.get(KEY_ANALYSIS(date))
+        if (!raw) return null
+        try {
+            return typeof raw === 'string' ? JSON.parse(raw) : raw as { analysis: string; model: string }
+        } catch {
+            return null
+        }
+    }
+}
+
+export const db = new Database()
