@@ -61,7 +61,7 @@ export default function LandingClient({ hasPassword }: { hasPassword?: boolean }
 
             <header className="px-6 py-4 flex items-center justify-between relative z-10 w-full max-w-7xl mx-auto">
                 <div className="flex items-center gap-2 font-bold text-lg">
-                    <img src="/logo.svg" alt="Oura Mate Logo" className="h-6 w-auto" /> {t.title}
+                    <img src="/pagelogo.svg" alt="Oura Mate Logo" className="h-6 w-auto" /> {t.title}
                 </div>
                 <div className="flex items-center gap-4">
                     <DropdownMenu>
