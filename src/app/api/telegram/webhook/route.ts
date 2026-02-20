@@ -17,8 +17,8 @@ export async function POST(request: NextRequest) {
     const allowedChatId = await db.getEnv('TELEGRAM_CHAT_ID')
 
     // Auth check
-    if (allowedChatId && chatId !== allowedChatId) {
-        await sendMessage(chatId, '⛔ Unauthorized.')
+    if (allowedChatId && chatId !== allowedChatId.trim()) {
+        await sendMessage(chatId, `⛔ Unauthorized.\n\nYour Chat ID is: \`${chatId}\`\nPlease update this in your Oura Mate Settings.`)
         return NextResponse.json({ ok: true })
     }
 
