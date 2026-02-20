@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { setWebhook, getWebhookInfo, deleteWebhook } from '@/lib/telegram'
+import { db } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
     const { action } = await request.json()
 
-    if (!process.env.TELEGRAM_BOT_TOKEN) {
+    const botToken = await db.getEnv('TELEGRAM_BOT_TOKEN')
+    if (!botToken) {
         return NextResponse.json({ error: 'Bot token not configured' }, { status: 400 })
     }
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CheckCircle2, Circle, ExternalLink, AlertCircle, PartyPopper, Save, Eye, EyeOff, Copy, Check, Loader2 } from "lucide-react"
+import { CheckCircle2, Circle, ExternalLink, AlertCircle, PartyPopper, Save, Eye, EyeOff, Copy, Check, Loader2, Lock } from "lucide-react"
 
 interface Status {
     configured: boolean
@@ -54,8 +54,14 @@ const AI_MODELS = [
 ]
 
 export function SetupWizard({ status, onComplete, success, error }: SetupWizardProps) {
+    const [authStatus, setAuthStatus] = useState<"checking" | "unauthorized" | "needs_setup" | "authorized">("checking")
+    const [password, setPassword] = useState("")
+    const [unlockPwd, setUnlockPwd] = useState("")
+    const [unlockError, setUnlockError] = useState(false)
+
     const [config, setConfig] = useState<ConfigValues>({})
     const [form, setForm] = useState({
+        password: "", // used for initial setup
         TELEGRAM_BOT_TOKEN: "",
         TELEGRAM_CHAT_ID: "",
         AI_API_KEY: "",
@@ -63,6 +69,7 @@ export function SetupWizard({ status, onComplete, success, error }: SetupWizardP
         OURA_CLIENT_ID: "",
         OURA_CLIENT_SECRET: "",
     })
+
     const [saving, setSaving] = useState(false)
     const [saved, setSaved] = useState(false)
     const [connectingOura, setConnectingOura] = useState(false)
@@ -70,39 +77,74 @@ export function SetupWizard({ status, onComplete, success, error }: SetupWizardP
     const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({})
     const [copied, setCopied] = useState("")
 
-    useEffect(() => {
-        fetch("/api/config").then(r => r.json()).then((data: ConfigValues) => {
+    const fetchConfig = useCallback(async (pwd?: string) => {
+        try {
+            const headers: Record<string, string> = {}
+            if (pwd) headers.Authorization = `Bearer ${pwd}`
+
+            const res = await fetch("/api/config", { headers })
+            const data = await res.json()
+
+            if (data.needsPassword) {
+                setAuthStatus("needs_setup")
+                return
+            }
+
+            if (res.status === 401) {
+                setAuthStatus("unauthorized")
+                if (pwd) setUnlockError(true)
+                return
+            }
+
+            setAuthStatus("authorized")
+            if (pwd) setPassword(pwd)
             setConfig(data)
-            // Set model from saved config
+
             if (data.AI_MODEL?.set && data.AI_MODEL.masked) {
                 setForm(f => ({ ...f, AI_MODEL: data.AI_MODEL.masked }))
             }
-        }).catch(() => { })
+        } catch { }
     }, [])
+
+    useEffect(() => {
+        fetchConfig()
+    }, [fetchConfig])
 
     const handleSave = async () => {
         setSaving(true)
         setSaved(false)
         try {
-            // Only send non-empty values
             const payload: Record<string, string> = {}
             for (const [key, val] of Object.entries(form)) {
                 if (val) payload[key] = val
             }
-            await fetch("/api/config", {
+
+            const headers: Record<string, string> = { "Content-Type": "application/json" }
+            if (password) headers.Authorization = `Bearer ${password}`
+
+            const res = await fetch("/api/config", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers,
                 body: JSON.stringify(payload),
             })
+
+            if (!res.ok) throw new Error("Failed to save")
+
             setSaved(true)
-            // Refresh config and status
+
+            const effectivePwd = authStatus === "needs_setup" ? form.password : password
+            if (authStatus === "needs_setup") {
+                setPassword(form.password)
+                setAuthStatus("authorized")
+            }
+
             const [newConfig] = await Promise.all([
-                fetch("/api/config").then(r => r.json()),
+                fetch("/api/config", { headers: { Authorization: `Bearer ${effectivePwd}` } }).then(r => r.json()),
                 onComplete(),
             ])
             setConfig(newConfig)
-            // Clear form inputs (keep model)
             setForm(f => ({
+                password: "",
                 TELEGRAM_BOT_TOKEN: "",
                 TELEGRAM_CHAT_ID: "",
                 AI_API_KEY: "",
@@ -111,6 +153,8 @@ export function SetupWizard({ status, onComplete, success, error }: SetupWizardP
                 OURA_CLIENT_SECRET: "",
             }))
             setTimeout(() => setSaved(false), 3000)
+        } catch {
+            // ignore
         } finally {
             setSaving(false)
         }
@@ -119,7 +163,10 @@ export function SetupWizard({ status, onComplete, success, error }: SetupWizardP
     const handleConnectOura = async () => {
         setConnectingOura(true)
         try {
-            const res = await fetch("/api/oura/auth")
+            const headers: Record<string, string> = {}
+            if (password) headers.Authorization = `Bearer ${password}`
+
+            const res = await fetch("/api/oura/auth", { headers })
             const data = await res.json()
             window.location.href = data.auth_url
         } catch {
@@ -130,9 +177,12 @@ export function SetupWizard({ status, onComplete, success, error }: SetupWizardP
     const handleSetupWebhook = async () => {
         setSettingUpWebhook(true)
         try {
+            const headers: Record<string, string> = { "Content-Type": "application/json" }
+            if (password) headers.Authorization = `Bearer ${password}`
+
             await fetch("/api/telegram/setup", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers,
                 body: JSON.stringify({ action: "setup" }),
             })
             onComplete()
@@ -191,6 +241,38 @@ export function SetupWizard({ status, onComplete, success, error }: SetupWizardP
         )
     }
 
+    if (authStatus === "checking") {
+        return <div className="py-12 text-center text-muted-foreground animate-pulse">Checking security...</div>
+    }
+
+    if (authStatus === "unauthorized") {
+        return (
+            <Card className="max-w-md mx-auto mt-8 border-primary/20 bg-primary/5">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Lock className="h-5 w-5 text-primary" />
+                        Configuration Locked
+                    </CardTitle>
+                    <CardDescription>Enter your Admin Password to view and change configurations.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                        <Input
+                            type="password"
+                            placeholder="Admin Password"
+                            value={unlockPwd}
+                            onChange={e => { setUnlockPwd(e.target.value); setUnlockError(false) }}
+                            onKeyDown={e => e.key === "Enter" && fetchConfig(unlockPwd)}
+                            autoFocus
+                        />
+                        {unlockError && <p className="text-xs text-destructive">Incorrect password</p>}
+                    </div>
+                    <Button className="w-full" onClick={() => fetchConfig(unlockPwd)} disabled={!unlockPwd}>Unlock</Button>
+                </CardContent>
+            </Card>
+        )
+    }
+
     return (
         <div className="space-y-6">
             {/* Success/Error alerts */}
@@ -206,7 +288,8 @@ export function SetupWizard({ status, onComplete, success, error }: SetupWizardP
                     <AlertDescription>
                         {error === "oauth_denied" ? "OAuth authorization was denied."
                             : error === "token_exchange_failed" ? "Failed to exchange token. Please try again."
-                                : `Error: ${error}`}
+                                : error === "invalid_state" ? "Security check failed. Please try connecting again."
+                                    : `Error: ${error}`}
                     </AlertDescription>
                 </Alert>
             )}
@@ -255,6 +338,24 @@ export function SetupWizard({ status, onComplete, success, error }: SetupWizardP
                 </CardHeader>
                 <CardContent className="pt-0 space-y-6">
                     <Separator />
+
+                    {authStatus === "needs_setup" && (
+                        <div className="space-y-4 bg-primary/5 p-4 rounded-lg border border-primary/20">
+                            <h4 className="text-sm font-semibold flex items-center gap-2 text-primary"><Lock className="h-4 w-4" /> Security Setup</h4>
+                            <p className="text-xs text-muted-foreground">Create an Admin Password for this instance. You will need it to view or change your API keys in the future.</p>
+                            <div className="space-y-2">
+                                <Label htmlFor="password">Admin Password</Label>
+                                <Input
+                                    id="password"
+                                    type="password"
+                                    value={form.password}
+                                    onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                                    placeholder="Enter a strong password"
+                                    autoFocus
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     {/* Telegram */}
                     <div className="space-y-4">
@@ -324,7 +425,11 @@ export function SetupWizard({ status, onComplete, success, error }: SetupWizardP
                     <Separator />
 
                     {/* Save button */}
-                    <Button onClick={handleSave} disabled={saving} className="w-full">
+                    <Button
+                        onClick={handleSave}
+                        disabled={saving || (authStatus === "needs_setup" && !form.password)}
+                        className="w-full"
+                    >
                         {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : <><Save className="mr-2 h-4 w-4" /> Save Configuration</>}
                     </Button>
                 </CardContent>

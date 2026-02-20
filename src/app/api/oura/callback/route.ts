@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify state
-    const savedState = await db.getConfig('oauth_state')
+    const savedState = await db.getConfig('oura_oauth_state')
     if (savedState && state !== savedState) {
         return NextResponse.redirect(`${baseUrl}/?error=invalid_state`)
     }

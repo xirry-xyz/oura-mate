@@ -114,6 +114,16 @@ class Database {
         }
     }
 
+    // --- Internal Auth ---
+
+    async getPassword(): Promise<string | null> {
+        return this.get('oura:internal:password')
+    }
+
+    async setPassword(password: string) {
+        await this.set('oura:internal:password', password)
+    }
+
     // --- Tokens ---
 
     async saveTokens(accessToken: string, refreshToken: string, expiresAt: string) {
@@ -167,8 +177,7 @@ class Database {
 /** Mask sensitive values for display */
 function maskValue(key: string, value: string): string {
     if (key === 'AI_MODEL' || key === 'ANALYSIS_LANGUAGE') return value
-    if (value.length <= 8) return '••••••'
-    return value.slice(0, 4) + '••••' + value.slice(-4)
+    return '••••已配置'
 }
 
 export const db = new Database()
