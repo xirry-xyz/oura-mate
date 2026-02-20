@@ -272,7 +272,7 @@ export function SetupWizard({ status, onComplete, success, error }: SetupWizardP
                     <div className="pt-4 mt-2 border-t border-border/50 text-center space-y-2">
                         <p className="text-xs text-muted-foreground">Not the owner of this instance?</p>
                         <Button variant="outline" size="sm" className="w-full text-xs" asChild>
-                            <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fxirry-xyz%2Foura-mate&project-name=oura-mate&repository-name=oura-mate&demo-title=Oura%20Mate%20%E2%80%94%20AI%20Health%20Analyzer&demo-url=https%3A%2F%2Foura-mate.xirry.xyz">
+                            <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fxirry-xyz%2Foura-mate&project-name=oura-mate&repository-name=oura-mate&demo-title=Oura%20Mate%20%E2%80%94%20AI%20Health%20Analyzer&demo-url=https%3A%2F%2Foura-mate.xirry.xyz&env=KV_REST_API_URL,KV_REST_API_TOKEN&envDescription=Please%20create%20a%20KV%20Database%20in%20the%20Storage%20tab%20on%20Vercel%20to%20auto-fill%20these%20tokens.">
                                 Deploy Your Own Oura Mate
                             </a>
                         </Button>
