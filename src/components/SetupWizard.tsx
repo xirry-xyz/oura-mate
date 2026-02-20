@@ -34,21 +34,24 @@ const AI_MODELS = [
     {
         provider: "OpenAI", models: [
             { value: "gpt-4o", label: "GPT-4o" },
-            { value: "gpt-4o-mini", label: "GPT-4o Mini" },
-            { value: "gpt-4.1", label: "GPT-4.1" },
+            { value: "o1", label: "o1" },
+            { value: "o3-mini", label: "o3-mini" },
+            { value: "gpt-5.2", label: "GPT-5.2" },
         ]
     },
     {
         provider: "Google Gemini", models: [
-            { value: "gemini-2.5-pro-preview-05-06", label: "Gemini 2.5 Pro" },
-            { value: "gemini-2.5-flash-preview-05-20", label: "Gemini 2.5 Flash" },
-            { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash" },
+            { value: "gemini-3.1-pro", label: "Gemini 3.1 Pro" },
+            { value: "gemini-3.1-flash", label: "Gemini 3.1 Flash" },
+            { value: "gemini-3.0-pro", label: "Gemini 3.0 Pro" },
+            { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
         ]
     },
     {
         provider: "Anthropic", models: [
-            { value: "claude-sonnet-4-20250514", label: "Claude Sonnet 4" },
-            { value: "claude-3-5-haiku-20241022", label: "Claude 3.5 Haiku" },
+            { value: "claude-4-6-sonnet-20260217", label: "Claude 4.6 Sonnet" },
+            { value: "claude-4-6-opus-20260205", label: "Claude 4.6 Opus" },
+            { value: "claude-3-5-sonnet-20241022", label: "Claude 3.5 Sonnet" },
         ]
     },
 ]
@@ -440,7 +443,7 @@ export function SetupWizard({ status, onComplete, success, error }: SetupWizardP
                             </Select>
                         </div>
 
-                        {renderField("AI_API_KEY", "API Key", "sk-...", {
+                        {renderField("AI_API_KEY", "API Key", form.AI_MODEL.startsWith("gemini") ? "AIzaSy..." : form.AI_MODEL.startsWith("claude") ? "sk-ant-..." : "sk-...", {
                             text: "Get key",
                             url: form.AI_MODEL.startsWith("gemini")
                                 ? "https://aistudio.google.com"
