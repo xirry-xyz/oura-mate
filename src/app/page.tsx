@@ -1,8 +1,24 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
+import { headers } from "next/headers"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Bot, Github, Sparkles, Activity, ShieldCheck } from "lucide-react"
+import { db } from "@/lib/db"
 
-export default function LandingPage() {
+export default async function LandingPage() {
+    // Determine if we should auto-redirect to /app
+    // We redirect IF: it's not the official demo site AND the user has already set an admin password.
+    const headersList = await headers()
+    const host = headersList.get("host") || ""
+    const isOfficialSite = host.includes("oura-mate.xirry.xyz") || host.includes("oura-mate.vercel.app")
+
+    if (!isOfficialSite) {
+        const hasPassword = await db.getPassword()
+        if (hasPassword) {
+            redirect("/app")
+        }
+    }
+
     return (
         <div className="min-h-screen bg-background text-foreground flex flex-col relative overflow-hidden">
             {/* Background elements */}
@@ -41,7 +57,7 @@ export default function LandingPage() {
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
                         <Button size="lg" className="rounded-full px-8 text-base h-14 w-full sm:w-auto hover:scale-105 transition-transform" asChild>
-                            <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fxirry-xyz%2Foura-mate&project-name=oura-mate&repository-name=oura-mate&demo-title=Oura%20Mate%20%E2%80%94%20AI%20Health%20Analyzer&demo-url=https%3A%2F%2Foura-mate.vercel.app">
+                            <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fxirry-xyz%2Foura-mate&project-name=oura-mate&repository-name=oura-mate&demo-title=Oura%20Mate%20%E2%80%94%20AI%20Health%20Analyzer&demo-url=https%3A%2F%2Foura-mate.xirry.xyz">
                                 ▲ Deploy to Vercel <ArrowRight className="ml-2 h-4 w-4" />
                             </a>
                         </Button>
