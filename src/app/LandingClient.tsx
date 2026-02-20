@@ -111,7 +111,7 @@ export default function LandingClient({ hasPassword }: { hasPassword?: boolean }
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
                         <Button size="lg" className="rounded-full px-8 text-base h-14 w-full sm:w-auto hover:scale-105 transition-transform" asChild>
-                            <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fxirry-xyz%2Foura-mate&project-name=oura-mate&repository-name=oura-mate&demo-title=Oura%20Mate%20%E2%80%94%20AI%20Health%20Analyzer&demo-url=https%3A%2F%2Foura-mate.xirry.xyz&env=KV_REST_API_URL,KV_REST_API_TOKEN&envDescription=Please%20create%20a%20KV%20Database%20in%20the%20Storage%20tab%20on%20Vercel%20to%20auto-fill%20these%20tokens.">
+                            <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fxirry-xyz%2Foura-mate&project-name=oura-mate&repository-name=oura-mate&demo-title=Oura%20Mate%20%E2%80%94%20AI%20Health%20Analyzer&demo-url=https%3A%2F%2Foura-mate.xirry.xyz&env=KV_REST_API_URL,KV_REST_API_TOKEN&envDescription=Please%20click%20Storage%20-%3E%20Upstash%20Redis%20in%20your%20Vercel%20dashboard%20to%20auto-fill%20these%20tokens.">
                                 ▲ {t.deploy} <ArrowRight className="ml-2 h-4 w-4" />
                             </a>
                         </Button>
