@@ -110,6 +110,26 @@ export function SetupWizard({ status, onComplete, success, error }: SetupWizardP
         fetchConfig()
     }, [fetchConfig])
 
+    const handleSavePassword = async () => {
+        setSaving(true)
+        try {
+            const res = await fetch("/api/config", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ password: form.password }),
+            })
+
+            if (!res.ok) throw new Error("Failed to save password")
+
+            // Re-fetch config with the newly created password to sync state
+            await fetchConfig(form.password)
+        } catch {
+            // ignore
+        } finally {
+            setSaving(false)
+        }
+    }
+
     const handleSave = async () => {
         setSaving(true)
         setSaved(false)
@@ -245,6 +265,41 @@ export function SetupWizard({ status, onComplete, success, error }: SetupWizardP
         return <div className="py-12 text-center text-muted-foreground animate-pulse">Checking security...</div>
     }
 
+    if (authStatus === "needs_setup") {
+        return (
+            <Card className="max-w-md mx-auto mt-8 border-primary/20 bg-primary/5">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Lock className="h-5 w-5 text-primary" />
+                        Admin Password Setup
+                    </CardTitle>
+                    <CardDescription>
+                        Create an Admin Password for this instance. You must set this first to secure your instance before configuring any API keys.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                        <Input
+                            type="password"
+                            placeholder="Enter a strong password"
+                            value={form.password}
+                            onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                            onKeyDown={e => e.key === "Enter" && form.password && handleSavePassword()}
+                            autoFocus
+                        />
+                    </div>
+                    <Button
+                        className="w-full"
+                        onClick={async () => handleSavePassword()}
+                        disabled={!form.password || saving}
+                    >
+                        {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Save Admin Password"}
+                    </Button>
+                </CardContent>
+            </Card>
+        )
+    }
+
     if (authStatus === "unauthorized") {
         return (
             <Card className="max-w-md mx-auto mt-8 border-primary/20 bg-primary/5">
@@ -348,24 +403,6 @@ export function SetupWizard({ status, onComplete, success, error }: SetupWizardP
                 <CardContent className="pt-0 space-y-6">
                     <Separator />
 
-                    {authStatus === "needs_setup" && (
-                        <div className="space-y-4 bg-primary/5 p-4 rounded-lg border border-primary/20">
-                            <h4 className="text-sm font-semibold flex items-center gap-2 text-primary"><Lock className="h-4 w-4" /> Security Setup</h4>
-                            <p className="text-xs text-muted-foreground">Create an Admin Password for this instance. You will need it to view or change your API keys in the future.</p>
-                            <div className="space-y-2">
-                                <Label htmlFor="password">Admin Password</Label>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    value={form.password}
-                                    onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                                    placeholder="Enter a strong password"
-                                    autoFocus
-                                />
-                            </div>
-                        </div>
-                    )}
-
                     {/* Telegram */}
                     <div className="space-y-4">
                         <h4 className="text-sm font-semibold flex items-center gap-2">🤖 Telegram Bot</h4>
@@ -436,7 +473,7 @@ export function SetupWizard({ status, onComplete, success, error }: SetupWizardP
                     {/* Save button */}
                     <Button
                         onClick={handleSave}
-                        disabled={saving || (authStatus === "needs_setup" && !form.password)}
+                        disabled={saving}
                         className="w-full"
                     >
                         {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : <><Save className="mr-2 h-4 w-4" /> Save Configuration</>}
