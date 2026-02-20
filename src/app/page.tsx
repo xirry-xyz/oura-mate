@@ -10,12 +10,11 @@ export default async function LandingPage() {
     const host = headersList.get("host") || ""
     const isOfficialSite = host.includes("oura-mate.xirry.xyz") || host.includes("oura-mate.vercel.app")
 
-    if (!isOfficialSite) {
-        const hasPassword = await db.getPassword()
-        if (hasPassword) {
-            redirect("/app")
-        }
+    const hasPassword = await db.getPassword()
+
+    if (!isOfficialSite && hasPassword) {
+        redirect("/app")
     }
 
-    return <LandingClient />
+    return <LandingClient hasPassword={!!hasPassword} />
 }

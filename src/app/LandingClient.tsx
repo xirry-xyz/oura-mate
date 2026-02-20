@@ -3,7 +3,13 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, Bot, Github, Sparkles, Activity, ShieldCheck, Globe } from "lucide-react"
+import { ArrowRight, Bot, Github, Sparkles, Activity, ShieldCheck, Globe, Check } from "lucide-react"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 const dict = {
     en: {
@@ -14,6 +20,7 @@ const dict = {
         subtitle: "Deploy your own personal AI health coach in one click. It reads your daily Oura Ring data and sends you a personalized, actionable summary every morning via Telegram.",
         deploy: "Deploy to Vercel",
         configure: "Configure My Instance",
+        login: "Log In",
         feature1_title: "Bring Your Own AI",
         feature1_desc: "Choose between GPT-4o, Claude 3.5, or Gemini. You provide the API key, you control the costs.",
         feature2_title: "100% Private",
@@ -30,6 +37,7 @@ const dict = {
         subtitle: "一键部署你个人的 AI 健康私教。它每天会读取并分析你的 Oura Ring 数据，经过思考后，每天早晨通过 Telegram 给你发送一份个性化、可执行的中文健康简报。",
         deploy: "部署到 Vercel",
         configure: "配置我的实例",
+        login: "登录后台",
         feature1_title: "自带大模型密钥",
         feature1_desc: "支持 GPT-4o, Claude 3.5 或是 Gemini。由于你自带 API 密钥，你的使用成本几乎为零。",
         feature2_title: "100% 隐私安全",
@@ -40,7 +48,7 @@ const dict = {
     }
 }
 
-export default function LandingClient() {
+export default function LandingClient({ hasPassword }: { hasPassword?: boolean }) {
     const [lang, setLang] = useState<"en" | "zh">("en")
     const t = dict[lang]
 
@@ -56,18 +64,34 @@ export default function LandingClient() {
                     <span className="text-2xl">🔮</span> {t.title}
                 </div>
                 <div className="flex items-center gap-4">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setLang(lang === "en" ? "zh" : "en")}
-                        className="text-muted-foreground hover:text-foreground"
-                    >
-                        <Globe className="h-4 w-4 mr-2" />
-                        {lang === "en" ? "EN/中" : "中/EN"}
-                    </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+                                <Globe className="h-5 w-5" />
+                                <span className="sr-only">Toggle language</span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setLang("en")} className="flex items-center justify-between">
+                                English
+                                {lang === "en" && <Check className="h-3 w-3 ml-2" />}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setLang("zh")} className="flex items-center justify-between">
+                                中文
+                                {lang === "zh" && <Check className="h-3 w-3 ml-2" />}
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
                     <a href="https://github.com/xirry-xyz/oura-mate" target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
                         <Github className="h-5 w-5" />
                     </a>
+
+                    {hasPassword && (
+                        <Button variant="outline" size="sm" asChild className="rounded-full hidden sm:flex ml-2">
+                            <Link href="/app">{t.login}</Link>
+                        </Button>
+                    )}
                 </div>
             </header>
 
