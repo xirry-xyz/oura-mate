@@ -1,6 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
+import { ArrowLeft } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { SetupWizard } from "@/components/SetupWizard"
 import { StatusDashboard } from "@/components/StatusDashboard"
 
@@ -48,7 +51,14 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
-      <div className="mx-auto max-w-2xl px-4 py-8">
+      <div className="mx-auto max-w-2xl px-4 py-8 relative">
+        <Button variant="ghost" size="sm" className="mb-6 -ml-2 text-muted-foreground" asChild>
+          <Link href="/">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Home
+          </Link>
+        </Button>
+
         {/* Header */}
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold tracking-tight flex items-center justify-center gap-2">

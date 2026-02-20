@@ -115,9 +115,11 @@ export default function LandingClient({ hasPassword }: { hasPassword?: boolean }
                                 ▲ {t.deploy} <ArrowRight className="ml-2 h-4 w-4" />
                             </a>
                         </Button>
-                        <Button size="lg" variant="secondary" className="rounded-full px-8 text-base h-14 w-full sm:w-auto" asChild>
-                            <Link href="/app">{t.configure}</Link>
-                        </Button>
+                        {!hasPassword && (
+                            <Button size="lg" variant="secondary" className="rounded-full px-8 text-base h-14 w-full sm:w-auto" asChild>
+                                <Link href="/app">{t.configure}</Link>
+                            </Button>
+                        )}
                     </div>
                 </div>
 
