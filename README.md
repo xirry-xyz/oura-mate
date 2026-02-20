@@ -14,50 +14,78 @@
 - ⏰ **Daily Reports** — Automated morning insights via Vercel Cron
 - 🔒 **Self-Hosted** — Your own Vercel instance, your data
 
-## Quick Start
+## Quick Start / 快速开始
 
-### One-Click Deploy
+### 1. One-Click Deploy / 一键部署
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fxirry-xyz%2Foura-mate&project-name=oura-mate&repository-name=oura-mate&demo-title=Oura%20Mate%20%E2%80%94%20AI%20Health%20Analyzer&demo-url=https%3A%2F%2Foura-mate.xirry.xyz&env=KV_REST_API_URL,KV_REST_API_TOKEN&envDescription=Please%20click%20Storage%20-%3E%20Upstash%20Redis%20in%20your%20Vercel%20dashboard%20to%20auto-fill%20these%20tokens.)
 
-Click the button → Deploy → Visit your URL → Fill in API keys in the web UI. That's it!
+- **EN**: Click the button above to clone and deploy to your own Vercel account. After deployment, visit your URL and you will be greeted by the Setup Wizard.
+- **ZH**: 点击上方按钮，一键克隆并部署到你自己的 Vercel 账号下。部署完成后，访问你的专属网址，即可进入可视化的配置指引页面。
 
-### 1. Get Your Keys
+---
 
-| Key | Where to get it |
-|-----|----------------|
-| `TELEGRAM_BOT_TOKEN` | [@BotFather](https://t.me/BotFather) → `/newbot` |
-| `TELEGRAM_CHAT_ID` | [@userinfobot](https://t.me/userinfobot) |
-| `AI_API_KEY` | [OpenAI](https://platform.openai.com) / [Google AI Studio](https://aistudio.google.com) / [Anthropic](https://console.anthropic.com) |
-| `AI_MODEL` | `gpt-4o` / `gemini-2.0-flash` / `claude-sonnet-4-20250514` |
-| `OURA_CLIENT_ID` | [Oura Developer Portal](https://cloud.ouraring.com/oauth/applications) |
-| `OURA_CLIENT_SECRET` | Same as above |
+### 2. Getting Your API Keys / 获取必备的 API 密钥
 
-### 2. Connect Oura
+To power your AI health coach, you will need a few free configurations. 
+为了让你的 AI 健康私教运转起来，你需要准备以下免费的配置项：
 
-1. Visit your deployed URL → follow the setup wizard
-2. Click **Connect Oura Ring** → authorize
-3. Click **Activate Bot** → webhook registered
-4. Send `/today` in Telegram 🎉
+#### 🤖 Telegram Bot (Bot Token & Chat ID)
+- **EN**: 
+  1. Go to Telegram and search for [@BotFather](https://t.me/BotFather). Send `/newbot`, follow the prompts, and you will get your **Bot Token**.
+  2. Search for the bot you just created, say "Hello" to it.
+  3. Search for [@userinfobot](https://t.me/userinfobot) and send `/start`. It will reply with your numeric **Chat ID**.
+- **ZH**:
+  1. 打开 Telegram，搜索 [@BotFather](https://t.me/BotFather)，发送 `/newbot`，按提示起个名字，最后它会发给你一串 **Bot Token**。
+  2. 搜索你刚刚创建的机器人名字，进去和它随便说句话（比如 "Hello"）。
+  3. 接着搜索 [@userinfobot](https://t.me/userinfobot)，发送 `/start`，它会回复一串纯数字的 **Chat ID**。
 
-### 3. Optional: Persistent Storage
+#### 🧠 AI Provider (API Key & Model)
+- **EN**: Choose your preferred frontend model (e.g., `gpt-5.2`, `claude-4-6-sonnet-20260217`, `gemini-3.1-pro`).
+  - **OpenAI**: Get your key at [platform.openai.com](https://platform.openai.com).
+  - **Anthropic**: Get your key at [console.anthropic.com](https://console.anthropic.com).
+  - **Google**: Get your key at [aistudio.google.com](https://aistudio.google.com).
+- **ZH**: 选择你喜欢的前沿大模型（例如目前最新的 `gpt-5.2`、`claude-4.6` 或者 `gemini-3.1`）。
+  - **OpenAI**: 在 [platform.openai.com](https://platform.openai.com) 获取。
+  - **Anthropic**: 在 [console.anthropic.com](https://console.anthropic.com) 获取。
+  - **Google Gemini**: 在 [aistudio.google.com](https://aistudio.google.com) 免费申请。
 
-Add [Upstash Redis](https://vercel.com/integrations/upstash) from Vercel Marketplace (under the Storage tab) for persistent token storage. Without it, tokens are stored in memory and will reset on cold start.
+#### 💍 Oura Ring (Client ID & Secret)
+- **EN**:
+  1. Visit the [Oura Developer Portal](https://cloud.ouraring.com/oauth/applications) and sign in.
+  2. Click "New Application". Fill in any name.
+  3. For the **Redirect URI**, you MUST enter: `https://<YOUR-VERCEL-DOMAIN>/api/oura/callback`.
+  4. Save to get your **Client ID** and **Client Secret**.
+- **ZH**:
+  1. 登录 [Oura 开发者后台](https://cloud.ouraring.com/oauth/applications)。
+  2. 点击 "New Application" 创建一个新应用，名字随便填。
+  3. 在 **Redirect URIs** 这一栏，必须填入：`https://<你刚刚部署出来的Vercel网址>/api/oura/callback`。
+  4. 保存后，你就能拿到专属的 **Client ID** 和 **Client Secret** 了。
 
-### 4. Optional: Daily Reports
+---
 
-Vercel Cron sends a daily report at 9 AM Beijing time. Set `CRON_SECRET` in Vercel env for security.
+### 3. Complete Web Setup / 在网页中完成配置
 
-## Telegram Commands
+- **EN**: Open your deployed Vercel URL. You will first be asked to create a secure Admin Password. Then, paste all the keys you gathered above into the wizard. Click "Save", click "Connect Oura Ring" to authorize your health data, and finally click "Activate Bot".
+- **ZH**: 打开你部署的 Vercel 网址。第一次进入由于系统保护，需要你先设置一个管理员密码。进入后，把你刚才获取到的所有秘钥填进去，点击保存。之后依次点击 "Connect Oura Ring" 完成账号授权，然后点击 "Activate Bot" 激活机器人回调。大功告成！
 
-| Command | Description |
-|---------|------------|
-| `/today` | AI health analysis for today |
-| `/sleep` | Detailed sleep data |
-| `/activity` | Activity summary |
-| `/week` | 7-day trend analysis |
-| `/ask <question>` | Free-form health Q&A |
-| `/help` | Show all commands |
+### 4. Talk to your Bot / 开始聊天
+
+- **EN**: Go to your Telegram bot and send `/today` to get your first AI analysis!
+- **ZH**: 回到 Telegram，向你的机器人发送 `/today` 命令，获取你的第一份私人健康诊断简报吧！🎉
+
+---
+
+## Telegram Commands / 常用命令
+
+| Command | Description (EN) | 功能说明 (ZH) |
+|---------|------------------|-------------|
+| `/today` | AI health analysis for today | 今日人工智能健康诊断总结 |
+| `/sleep` | Detailed sleep data | 昨晚详细睡眠数据折线图 |
+| `/activity` | Activity summary | 运动与热量消耗概览 |
+| `/week` | 7-day trend analysis | 过去7天趋势分析与建议 |
+| `/ask` | Free-form health Q&A | 自由提问一切健康相关问题 |
+| `/help` | Show all commands | 显示全部可用命令 |
 
 ## Tech Stack
 
