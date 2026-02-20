@@ -18,7 +18,7 @@ const dict = {
         h1_1: "Your Oura Data,",
         h1_2: "Brilliantly Explained.",
         subtitle: "Deploy your own personal AI health coach in one click. It reads your daily Oura Ring data and sends you a personalized, actionable summary every morning via Telegram.",
-        deploy: "Deploy to Vercel",
+        deploy: "Deploy my own instance",
         configure: "Configure My Instance",
         login: "Log In",
         feature1_title: "Bring Your Own AI",
@@ -35,7 +35,7 @@ const dict = {
         h1_1: "让你的 Oura 数据，",
         h1_2: "开始说人话。",
         subtitle: "一键部署你个人的 AI 健康私教。它每天会读取并分析你的 Oura Ring 数据，经过思考后，每天早晨通过 Telegram 给你发送一份个性化、可执行的中文健康简报。",
-        deploy: "部署到 Vercel",
+        deploy: "部署我自己的实例",
         configure: "配置我的实例",
         login: "登录后台",
         feature1_title: "自带大模型密钥",
@@ -66,7 +66,7 @@ export default function LandingClient({ hasPassword }: { hasPassword?: boolean }
                 <div className="flex items-center gap-4">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+                            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground cursor-pointer">
                                 <Globe className="h-5 w-5" />
                                 <span className="sr-only">Toggle language</span>
                             </Button>
