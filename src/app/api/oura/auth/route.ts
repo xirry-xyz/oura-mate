@@ -5,12 +5,13 @@ import { getOuraAuthUrl } from '@/lib/oura'
 /**
  * GET /api/oura/auth — generate OAuth2 authorization URL.
  */
-export async function GET() {
+export async function GET(request: Request) {
     const clientId = await db.getEnv('OURA_CLIENT_ID')
     if (!clientId) return NextResponse.json({ error: 'OURA_CLIENT_ID not configured' }, { status: 400 })
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
-        || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+    const host = request.headers.get("x-forwarded-host") || request.headers.get("host")
+    const protocol = request.headers.get("x-forwarded-proto") || "https"
+    const baseUrl = host ? `${protocol}://${host}` : (process.env.NEXT_PUBLIC_BASE_URL || `https://${process.env.VERCEL_URL}`)
 
     const redirectUri = `${baseUrl}/api/oura/callback`
     const state = Math.random().toString(36).slice(2)

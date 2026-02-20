@@ -459,7 +459,7 @@ export function SetupWizard({ status, onComplete, success, error }: SetupWizardP
                     <div className="space-y-4">
                         <h4 className="text-sm font-semibold flex items-center gap-2">💍 Oura Ring</h4>
                         <p className="text-xs text-muted-foreground">
-                            Create an app at <a href="https://cloud.ouraring.com/oauth/applications" target="_blank" className="text-primary underline">Oura Developer Portal</a>, set Redirect URI to:
+                            Create an app at <a href="https://developer.ouraring.com/applications" target="_blank" className="text-primary underline">Oura Developer Portal</a>, set Redirect URI to:
                         </p>
                         <div className="flex items-center gap-2">
                             <code className="bg-muted px-2 py-1 rounded text-xs break-all flex-1">{status?.base_url}/api/oura/callback</code>

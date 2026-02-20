@@ -8,9 +8,9 @@ export async function GET(request: NextRequest) {
     const state = searchParams.get('state')
     const error = searchParams.get('error')
 
-    const baseUrl = process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : process.env.NEXT_PUBLIC_BASE_URL || `http://localhost:${process.env.PORT || 3000}`
+    const host = request.headers.get("x-forwarded-host") || request.headers.get("host")
+    const protocol = request.headers.get("x-forwarded-proto") || "https"
+    const baseUrl = host ? `${protocol}://${host}` : (process.env.NEXT_PUBLIC_BASE_URL || `https://${process.env.VERCEL_URL}`)
 
     if (error) {
         return NextResponse.redirect(`${baseUrl}/?error=oauth_denied`)

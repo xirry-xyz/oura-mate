@@ -52,12 +52,12 @@ To power your AI health coach, you will need a few free configurations.
 
 #### 💍 Oura Ring (Client ID & Secret)
 - **EN**:
-  1. Visit the [Oura Developer Portal](https://cloud.ouraring.com/oauth/applications) and sign in.
+  1. Visit the [Oura Developer Portal](https://developer.ouraring.com/applications) and sign in.
   2. Click "New Application". Fill in any name.
   3. For the **Redirect URI**, you MUST enter: `https://<YOUR-VERCEL-DOMAIN>/api/oura/callback`.
   4. Save to get your **Client ID** and **Client Secret**.
 - **ZH**:
-  1. 登录 [Oura 开发者后台](https://cloud.ouraring.com/oauth/applications)。
+  1. 登录 [Oura 开发者后台](https://developer.ouraring.com/applications)。
   2. 点击 "New Application" 创建一个新应用，名字随便填。
   3. 在 **Redirect URIs** 这一栏，必须填入：`https://<你刚刚部署出来的Vercel网址>/api/oura/callback`。
   4. 保存后，你就能拿到专属的 **Client ID** 和 **Client Secret** 了。
