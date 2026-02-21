@@ -109,8 +109,9 @@ export async function askQuestion(question: string, today: DailyHealth, history?
             temperature: 0.7,
         })
         return text
-    } catch (e) {
+    } catch (e: any) {
         console.error('AI question failed:', e)
-        return `⚠️ AI response failed: ${e}`
+        const safeError = e.message ? String(e.message).replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&') : 'Unknown'
+        return `⚠️ AI response failed: ${safeError}`
     }
 }
