@@ -28,15 +28,32 @@ async function tgPost(method: string, body: Record<string, unknown>) {
     }
 }
 
+function escapeTelegramHTML(text: string): string {
+    const validTags: string[] = []
+    const withPlaceholders = text.replace(/<\/?(?:b|i|code|pre)>/gi, (match) => {
+        validTags.push(match)
+        return `@@@TG_TAG_${validTags.length - 1}@@@`
+    })
+
+    const escaped = withPlaceholders
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+
+    return escaped.replace(/@@@TG_TAG_(\d+)@@@/g, (_, index) => validTags[parseInt(index)])
+}
+
 export async function sendMessage(chatId: string, text: string, parseMode = 'HTML') {
+    const safeText = parseMode === 'HTML' ? escapeTelegramHTML(text) : text
+
     // Split long messages
     const MAX = 4000
-    if (text.length <= MAX) {
-        return tgPost('sendMessage', { chat_id: chatId, text, parse_mode: parseMode })
+    if (safeText.length <= MAX) {
+        return tgPost('sendMessage', { chat_id: chatId, text: safeText, parse_mode: parseMode })
     }
 
     const chunks: string[] = []
-    let remaining = text
+    let remaining = safeText
     while (remaining.length > 0) {
         if (remaining.length <= MAX) {
             chunks.push(remaining)
