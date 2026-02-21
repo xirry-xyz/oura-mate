@@ -40,7 +40,26 @@ function escapeTelegramHTML(text: string): string {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
 
-    return escaped.replace(/@@@TG_TAG_(\d+)@@@/g, (_, index) => validTags[parseInt(index)])
+    let finalHtml = escaped.replace(/@@@TG_TAG_(\d+)@@@/g, (_, index) => validTags[parseInt(index)])
+
+    // Auto-close any unclosed HTML tags to prevent Telegram parser crashes
+    const stack: string[] = []
+    const tagRegex = /<\/?(b|i|code|pre)>/gi
+    let match
+    while ((match = tagRegex.exec(finalHtml)) !== null) {
+        const isClosing = match[0].startsWith('</')
+        const tag = match[1].toLowerCase()
+        if (isClosing) {
+            if (stack.length > 0 && stack[stack.length - 1] === tag) stack.pop()
+        } else {
+            stack.push(tag)
+        }
+    }
+    while (stack.length > 0) {
+        finalHtml += `</${stack.pop()}>`
+    }
+
+    return finalHtml
 }
 
 export async function sendMessage(chatId: string, text: string, parseMode = 'HTML') {
