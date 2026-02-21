@@ -24,7 +24,13 @@ async function getModel() {
 
     // Gemini models
     if (modelName.startsWith('gemini')) {
-        const google = createGoogleGenerativeAI({ apiKey })
+        // Automatically route next-gen Gemini models to v1alpha endpoint
+        const isNextGen = modelName.includes('gemini-3') || modelName.includes('gemini-2.5')
+        const googleUrl = isNextGen
+            ? 'https://generativelanguage.googleapis.com/v1alpha'
+            : 'https://generativelanguage.googleapis.com/v1beta'
+
+        const google = createGoogleGenerativeAI({ apiKey, baseURL: googleUrl })
         return google(modelName)
     }
 
