@@ -31,15 +31,7 @@ async function getModel() {
             : 'https://generativelanguage.googleapis.com/v1beta'
 
         const google = createGoogleGenerativeAI({ apiKey, baseURL: googleUrl })
-        // @ts-ignore - Vercel AI SDK types omit the second options parameter natively implemented in their JS compiler
-        return google(modelName, {
-            safetySettings: [
-                { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-                { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-                { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-                { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' }
-            ]
-        })
+        return google(modelName)
     }
 
     // Claude models
@@ -96,6 +88,16 @@ export async function analyzeDaily(today: DailyHealth, history?: DailyHealth[]):
             prompt,
             maxOutputTokens: 2000,
             temperature: 0.7,
+            providerOptions: {
+                google: {
+                    safetySettings: [
+                        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+                        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+                        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+                        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' }
+                    ]
+                }
+            }
         })
         const modelName = await db.getEnv('AI_MODEL') || 'gpt-4o'
         await db.saveAnalysis(today.day, text, modelName)
@@ -121,6 +123,16 @@ export async function askQuestion(question: string, today: DailyHealth, history?
             prompt: `My health data:\n${context}\n\nQuestion: ${question}`,
             maxOutputTokens: 1500,
             temperature: 0.7,
+            providerOptions: {
+                google: {
+                    safetySettings: [
+                        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+                        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+                        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+                        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' }
+                    ]
+                }
+            }
         })
         return text
     } catch (e: any) {
