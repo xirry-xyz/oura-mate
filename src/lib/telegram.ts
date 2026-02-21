@@ -28,7 +28,7 @@ async function tgPost(method: string, body: Record<string, unknown>) {
     }
 }
 
-export async function sendMessage(chatId: string, text: string, parseMode = 'Markdown') {
+export async function sendMessage(chatId: string, text: string, parseMode = 'HTML') {
     // Split long messages
     const MAX = 4000
     if (text.length <= MAX) {

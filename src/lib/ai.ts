@@ -109,7 +109,7 @@ export async function askQuestion(question: string, today: DailyHealth, history?
         const model = await getModel()
         const { text } = await generateText({
             model,
-            system: `You are a health analyst with access to the user's Oura Ring data. Answer their questions based on the data provided. Respond in ${language}. Be specific and use numbers.`,
+            system: `You are a health analyst with access to the user's Oura Ring data. Answer their questions based on the data provided. Respond in ${language}. Be specific and use numbers. Format your response using basic HTML tags (<b>, <i>, <code>, <pre>) NEVER use markdown asterisks.`,
             prompt: `My health data:\n${context}\n\nQuestion: ${question}`,
             maxOutputTokens: 1500,
             temperature: 0.7,

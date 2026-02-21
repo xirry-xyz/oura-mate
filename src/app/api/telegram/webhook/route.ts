@@ -32,8 +32,8 @@ export async function POST(request: NextRequest) {
             case '/start':
             case '/help': {
                 const helpText = [
-                    '🔮 *Oura Mate — AI Health Analyzer*\n',
-                    '📋 *Available Commands:*',
+                    '🔮 <b>Oura Mate — AI Health Analyzer</b>\n',
+                    '📋 <b>Available Commands:</b>',
                     '/today — AI health analysis',
                     '/sleep — Detailed sleep data',
                     '/activity — Activity summary',
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
                 if (!health.sleep) {
                     await sendMessage(chatId, '❌ No sleep data for today.')
                 } else {
-                    await sendMessage(chatId, `💤 *Sleep Data — ${today}*\n\n${healthToSummary({ day: today, sleep: health.sleep })}`)
+                    await sendMessage(chatId, `💤 <b>Sleep Data — ${today}</b>\n\n${healthToSummary({ day: today, sleep: health.sleep })}`)
                 }
                 break
             }
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
                 if (!health.activity) {
                     await sendMessage(chatId, '❌ No activity data for today.')
                 } else {
-                    await sendMessage(chatId, `🏃 *Activity — ${today}*\n\n${healthToSummary({ day: today, activity: health.activity })}`)
+                    await sendMessage(chatId, `🏃 <b>Activity — ${today}</b>\n\n${healthToSummary({ day: today, activity: health.activity })}`)
                 }
                 break
             }
@@ -81,9 +81,9 @@ export async function POST(request: NextRequest) {
                     await sendMessage(chatId, '❌ No data available.')
                     break
                 }
-                let text = '📊 *7-Day Health Trend*\n\n'
+                let text = '📊 <b>7-Day Health Trend</b>\n\n'
                 for (const h of history) {
-                    text += `*${h.day}*\n${healthToContext(h)}\n\n`
+                    text += `<b>${h.day}</b>\n${healthToContext(h)}\n\n`
                 }
                 await sendMessage(chatId, text)
                 break

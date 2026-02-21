@@ -37,7 +37,7 @@ export async function GET(request: Request) {
         const history = await getHealthRange(7)
         const analysis = await analyzeDaily(health, history)
 
-        await sendMessage(chatId, `📅 *Daily Health Report — ${today}*\n\n${analysis}`)
+        await sendMessage(chatId, `📅 <b>Daily Health Report — ${today}</b>\n\n${analysis}`)
 
         return NextResponse.json({ ok: true, date: today })
     } catch (e) {
