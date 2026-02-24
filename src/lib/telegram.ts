@@ -63,29 +63,29 @@ function escapeTelegramHTML(text: string): string {
 }
 
 export async function sendMessage(chatId: string, text: string, parseMode = 'HTML') {
-    const safeText = parseMode === 'HTML' ? escapeTelegramHTML(text) : text
-
-    // Split long messages
-    const MAX = 4000
-    if (safeText.length <= MAX) {
-        return tgPost('sendMessage', { chat_id: chatId, text: safeText, parse_mode: parseMode })
-    }
-
+    // Split long messages BEFORE HTML escaping to prevent cutting open tags in half
+    const MAX = 3500 // Safer limit allowing room for HTML expansion
     const chunks: string[] = []
-    let remaining = safeText
-    while (remaining.length > 0) {
-        if (remaining.length <= MAX) {
-            chunks.push(remaining)
-            break
+
+    if (text.length <= MAX) {
+        chunks.push(text)
+    } else {
+        let remaining = text
+        while (remaining.length > 0) {
+            if (remaining.length <= MAX) {
+                chunks.push(remaining)
+                break
+            }
+            let splitAt = remaining.lastIndexOf('\n', MAX)
+            if (splitAt < MAX / 2) splitAt = MAX
+            chunks.push(remaining.slice(0, splitAt))
+            remaining = remaining.slice(splitAt)
         }
-        let splitAt = remaining.lastIndexOf('\n', MAX)
-        if (splitAt < MAX / 2) splitAt = MAX
-        chunks.push(remaining.slice(0, splitAt))
-        remaining = remaining.slice(splitAt)
     }
 
     for (const chunk of chunks) {
-        await tgPost('sendMessage', { chat_id: chatId, text: chunk, parse_mode: parseMode })
+        const safeChunk = parseMode === 'HTML' ? escapeTelegramHTML(chunk) : chunk
+        await tgPost('sendMessage', { chat_id: chatId, text: safeChunk, parse_mode: parseMode })
     }
 }
 
