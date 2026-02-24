@@ -86,7 +86,7 @@ export async function analyzeDaily(today: DailyHealth, history?: DailyHealth[]):
             model,
             system: 'You are a professional health analyst specializing in wearable data.',
             prompt,
-            maxOutputTokens: 2000,
+            maxOutputTokens: 8192,
             temperature: 0.7,
             providerOptions: {
                 google: {
@@ -121,7 +121,7 @@ export async function askQuestion(question: string, today: DailyHealth, history?
             model,
             system: `You are a health analyst with access to the user's Oura Ring data. Answer their questions based on the data provided. Respond in ${language}. Be specific and use numbers. Format your response using basic HTML tags (<b>, <i>, <code>, <pre>) NEVER use markdown asterisks.`,
             prompt: `My health data:\n${context}\n\nQuestion: ${question}`,
-            maxOutputTokens: 1500,
+            maxOutputTokens: 8192,
             temperature: 0.7,
             providerOptions: {
                 google: {
