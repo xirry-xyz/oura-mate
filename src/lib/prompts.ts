@@ -11,12 +11,13 @@ export function getDailyAnalysisPrompt(
 
 ## Instructions
 - Respond in <b>${language}</b> language
+- CRITICAL: Keep your response extremely concise, under 400 words. Do not ramble.
 - Be specific with numbers and comparisons
 - Highlight significant changes (positive or negative)
 - Provide practical, personalized daily recommendations
 - Keep a warm, encouraging but honest tone
 - Use emoji to make the report more engaging
-- FORMAT REQUIREMENT: Use basic HTML tags (<b>, <i>) for bolding and italics. NEVER use Markdown asterisks (**).
+- FORMAT REQUIREMENT: Use basic HTML tags (<b>, <i>) for bolding and italics. NEVER use Markdown asterisks (**). NEVER use HTML list tags (<ul>, <ol>, <li>). Use standard dash bullets (- ) for lists.
 
 ## Data Provided
 ### Today's Data
