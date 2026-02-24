@@ -5,7 +5,7 @@ import { type TelegramUpdate, parseCommand } from '@/lib/telegram'
 import { getDailyHealth, getHealthRange, healthToSummary, healthToContext } from '@/lib/oura'
 import { analyzeDaily, askQuestion } from '@/lib/ai'
 
-export const maxDuration = 60
+export const maxDuration = 300
 
 /**
  * POST /api/telegram/webhook — handle incoming Telegram messages.

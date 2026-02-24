@@ -4,7 +4,7 @@ import { getDailyHealth, getHealthRange } from '@/lib/oura'
 import { analyzeDaily } from '@/lib/ai'
 import { sendMessage } from '@/lib/telegram'
 
-export const maxDuration = 60
+export const maxDuration = 300
 
 /**
  * GET /api/cron/daily — Vercel Cron: daily health report.
