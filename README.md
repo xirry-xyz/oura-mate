@@ -18,10 +18,26 @@
 
 ### 1. One-Click Deploy / 一键部署
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fxirry-xyz%2Foura-mate&project-name=oura-mate&repository-name=oura-mate&demo-title=Oura%20Mate%20%E2%80%94%20AI%20Health%20Analyzer&demo-url=https%3A%2F%2Foura-mate.xirry.xyz&env=KV_REST_API_URL,KV_REST_API_TOKEN&envDescription=Please%20click%20Storage%20-%3E%20Upstash%20Redis%20in%20your%20Vercel%20dashboard%20to%20auto-fill%20these%20tokens.)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fxirry-xyz%2Foura-mate&project-name=oura-mate&repository-name=oura-mate&demo-title=Oura%20Mate%20%E2%80%94%20AI%20Health%20Analyzer&demo-url=https%3A%2F%2Foura-mate.xirry.xyz&envDescription=Please%20click%20Storage%20-%3E%20Upstash%20Redis%20in%20your%20Vercel%20dashboard%20to%20auto-fill%20these%20tokens.)
 
-- **EN**: Click the button above to clone and deploy to your own Vercel account. After deployment, visit your URL and you will be greeted by the Setup Wizard.
-- **ZH**: 点击上方按钮，一键克隆并部署到你自己的 Vercel 账号下。部署完成后，访问你的专属网址，即可进入可视化的配置指引页面。
+- **EN**:
+  1. Click the **Deploy** button above.
+  2. **Important Database Step:** Vercel will ask you to fill in `KV_REST_API_URL` and `KV_REST_API_TOKEN`. 
+     - You cannot fill these in manually right now. **Leave them blank or type "temp"**, and click **Deploy**.
+     - After the initial deployment finishes (it might show an error, which is fine), go to your Vercel Project Dashboard.
+     - Click the **Storage** tab at the top.
+     - Click **Create Database** -> select **KV (Redis)** -> accept the terms and click Create.
+     - Vercel will automatically inject the `KV_REST_API_URL` and `KV_REST_API_TOKEN` into your environment variables.
+     - Go to the **Deployments** tab, click the three dots on your latest deployment, and click **Redeploy**. Your app is now successfully connected to the database!
+  3. Go to the **Settings -> Environment Variables** tab in your Vercel Dashboard to add the rest of your keys (see below). After deployment, visit your URL and you will be greeted by the Setup Wizard.
+- **ZH**: 
+  1. 点击上方 **Deploy** 按钮，一键克隆到你自己的 Vercel 账号下。
+  2. **重要数据库步骤（必看）：** 直接点击 Deploy 部署（如果报错不用管）。部署初始页面后，进入你的 Vercel 项目控制台。
+     - 点击顶部的 **Storage** 标签页。
+     - 点击 **Create Database** -> 选择 **KV (Redis)** -> 接受条款并点击创建。
+     - Vercel 会自动将 `KV_REST_API_URL` 和 `KV_REST_API_TOKEN` 填入你的环境变量中。
+     - 去到 **Deployments** 标签页，点击最新那次部署右侧的三个点，选择 **Redeploy** 重新部署。你的应用现在已成功连接数据库！
+  3. 前往 Vercel 的 **Settings -> Environment Variables** 继续添加剩余的环境变量。部署完成后，访问你的专属网址，即可进入可视化的配置指引页面。
 
 ---
 
