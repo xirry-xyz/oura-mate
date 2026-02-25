@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, Bot, Github, Sparkles, Activity, ShieldCheck, Globe, Check } from "lucide-react"
+import { ArrowRight, Bot, Github, Sparkles, Activity, ShieldCheck, Globe, Check, BookOpen } from "lucide-react"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -21,6 +21,7 @@ const dict = {
         deploy: "Deploy my own instance",
         configure: "Configure My Instance",
         login: "Log In",
+        tutorial: "Read Deployment Tutorial",
         feature1_title: "Bring Your Own AI",
         feature1_desc: "Choose between GPT-5.2, Claude 4.6, or Gemini 3.1. You provide the API key, you control the costs.",
         feature2_title: "100% Private",
@@ -38,6 +39,7 @@ const dict = {
         deploy: "部署我自己的实例",
         configure: "配置我的实例",
         login: "登录后台",
+        tutorial: "阅读部署教程",
         feature1_title: "自带大模型密钥",
         feature1_desc: "支持 GPT-5.2, Claude 4.6 或是 Gemini 3.1。由于你自带 API 密钥，你的使用成本几乎为零。",
         feature2_title: "100% 隐私安全",
@@ -111,8 +113,13 @@ export default function LandingClient({ hasPassword }: { hasPassword?: boolean }
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
                         <Button size="lg" className="rounded-full px-8 text-base h-14 w-full sm:w-auto hover:scale-105 transition-transform" asChild>
-                            <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fxirry-xyz%2Foura-mate&project-name=oura-mate&repository-name=oura-mate&demo-title=Oura%20Mate%20%E2%80%94%20AI%20Health%20Analyzer&demo-url=https%3A%2F%2Foura-mate.xirry.xyz&env=KV_REST_API_URL,KV_REST_API_TOKEN&envDescription=Please%20click%20Storage%20-%3E%20Upstash%20Redis%20in%20your%20Vercel%20dashboard%20to%20auto-fill%20these%20tokens.">
+                            <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fxirry-xyz%2Foura-mate&project-name=oura-mate&repository-name=oura-mate&demo-title=Oura%20Mate%20%E2%80%94%20AI%20Health%20Analyzer&demo-url=https%3A%2F%2Foura-mate.xirry.xyz&envDescription=Please%20click%20Storage%20-%3E%20Upstash%20Redis%20in%20your%20Vercel%20dashboard%20to%20auto-fill%20these%20tokens.">
                                 ▲ {t.deploy} <ArrowRight className="ml-2 h-4 w-4" />
+                            </a>
+                        </Button>
+                        <Button size="lg" variant="outline" className="rounded-full px-8 text-base h-14 w-full sm:w-auto" asChild>
+                            <a href="https://github.com/xirry-xyz/oura-mate#1-one-click-deploy--%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2" target="_blank" rel="noreferrer">
+                                <BookOpen className="mr-2 h-4 w-4" /> {t.tutorial}
                             </a>
                         </Button>
                         {!hasPassword && (
